@@ -23,7 +23,7 @@ export async function POST() {
     const token = jwt.sign(
       {
         apikey: apiKey,
-        permissions: ["allow_join", "ask_join", "end_meeting", "toggle_mic", "toggle_webcam", "toggle_screen_share", "chat", "pin", "remove_participant"],
+        permissions: ["allow_join", "allow_mod"],
       },
       apiSecret,
       {

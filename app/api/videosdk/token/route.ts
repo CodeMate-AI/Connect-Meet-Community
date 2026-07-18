@@ -21,12 +21,15 @@ export async function GET() {
     const token = jwt.sign(
       {
         apikey: apiKey,
-        permissions: ["allow_join", "ask_join", "end_meeting", "toggle_mic", "toggle_webcam", "toggle_screen_share", "chat", "pin", "remove_participant"],
+        permissions: ["allow_join", "allow_mod"],
+        version: 2,
+        roles: ["rtc"],
+        iat: Math.floor(Date.now() / 1000) - 300, // 5 minutes in the past for clock drift
       },
       apiSecret,
       {
         algorithm: "HS256",
-        expiresIn: DEFAULT_TOKEN_EXPIRY_SECONDS,
+        expiresIn: "2h",
       }
     );
 

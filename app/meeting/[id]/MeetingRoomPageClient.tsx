@@ -7,6 +7,7 @@ import {
   useMeeting,
   usePubSub,
 } from "@videosdk.live/react-sdk";
+import { VideoSDK } from "@videosdk.live/js-sdk";
 import VideoGrid from "@/components/call/VideoGrid";
 import ControlBar from "@/components/call/ControlBar";
 import ParticipantsPanel from "@/components/call/ParticipantsPanel";
@@ -200,8 +201,11 @@ function ActiveMeetingRoom({
   );
 }
 
+let globalJoinAttempted = false;
+
 function MeetingRoomContent() {
   const [isJoined, setIsJoined] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   const meeting = useMeeting({
     onMeetingJoined: () => {
@@ -211,11 +215,16 @@ function MeetingRoomContent() {
     },
     onMeetingLeft: () => {
       setIsJoined(false);
+      globalJoinAttempted = false;
+    },
+    onError: (err: any) => {
+      console.error("Meeting join error:", err);
+      setJoinError(err?.message || "Could not connect to the meeting.");
+      globalJoinAttempted = false;
     },
   });
 
   const { join, leave } = meeting;
-  const joinAttempted = useRef(false);
 
   const joinRef = useRef(join);
   const leaveRef = useRef(leave);
@@ -228,13 +237,20 @@ function MeetingRoomContent() {
   });
 
   useEffect(() => {
-    if (!joinAttempted.current) {
+    if (!globalJoinAttempted) {
       joinRef.current();
-      joinAttempted.current = true;
+      globalJoinAttempted = true;
     }
     return () => {
       if (isJoinedRef.current) {
-        leaveRef.current();
+        try {
+          Promise.resolve(leaveRef.current()).catch((e) => {
+            console.warn("Safely ignored async leave error:", e);
+          });
+        } catch (e) {
+          console.warn("Safely ignored sync leave error:", e);
+        }
+        globalJoinAttempted = false;
       }
     };
   }, []);
@@ -243,6 +259,28 @@ function MeetingRoomContent() {
     meeting.leave();
     window.location.assign("/");
   }, [meeting]);
+
+  if (joinError) {
+    return (
+      <div className="dark flex min-h-screen items-center justify-center bg-[#0B1120] px-6 text-center text-[#E2E8F0]">
+        <div className="max-w-md space-y-4 rounded-3xl border border-white/10 bg-[#0F172A]/90 p-6 shadow-2xl shadow-black/20">
+          <Icon name="WifiOff" className="mx-auto h-10 w-10 text-red-400" />
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold">Unable to join meeting</h1>
+            <p className="text-sm text-[#94A3B8]">{joinError}</p>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={handleLeave}
+              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-[#E2E8F0] transition-colors hover:bg-white/10"
+            >
+              Return to dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isJoined) {
     return (
@@ -279,6 +317,27 @@ export default function MeetingRoomPageClient() {
         ? localStorage.getItem(DISPLAY_NAME_KEY) || "Guest"
         : "Guest";
     setDisplayName(savedName);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const msg = event.reason?.message || String(event.reason);
+      if (
+        msg.includes("emit") ||
+        msg.includes("timeout") ||
+        msg.includes("properties of null")
+      ) {
+        event.preventDefault();
+        console.warn("Muted harmless VideoSDK unhandled rejection:", event.reason);
+      }
+    };
+
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    return () => {
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+    };
   }, []);
 
   useEffect(() => {
@@ -379,6 +438,10 @@ export default function MeetingRoomPageClient() {
         </div>
       </div>
     );
+  }
+
+  if (typeof window !== "undefined") {
+    VideoSDK.config(token);
   }
 
   return (
