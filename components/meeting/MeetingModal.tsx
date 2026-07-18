@@ -209,7 +209,7 @@ export default function MeetingModal({
           </TabsList>
 
           {/* Join Tab */}
-          <TabsContent value="join" className="px-6 py-5 space-y-4">
+          <TabsContent value="join" className="px-6 py-5 space-y-4 min-w-0">
             <div>
               <label className="block text-xs font-medium text-[#64748B] mb-1.5">
                 Meeting ID
@@ -276,7 +276,7 @@ export default function MeetingModal({
           </TabsContent>
 
           {/* New Tab */}
-          <TabsContent value="new" className="px-6 py-5 space-y-4">
+          <TabsContent value="new" className="px-6 py-5 space-y-4 min-w-0">
             <div>
               <label className="block text-xs font-medium text-[#64748B] mb-1.5">
                 Meeting Title

@@ -164,7 +164,7 @@ export default function QuickActions() {
               Your meeting is ready. Share the link or start now.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
+          <div className="flex flex-col gap-4 py-2 min-w-0">
             <div className="p-3 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]">
               <div className="text-xs text-[#64748B] mb-1">Meeting Link</div>
               <div className="flex items-center gap-2 min-w-0">
