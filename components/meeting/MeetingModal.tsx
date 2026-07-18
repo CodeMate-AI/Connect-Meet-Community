@@ -24,10 +24,17 @@ import {
   generateMeetingLink,
 } from "@/lib/meetings";
 
+const DISPLAY_NAME_KEY = "connectmeet_display_name";
+
 interface MeetingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab?: "join" | "new";
+}
+
+function getDisplayName(): string {
+  if (typeof window === "undefined") return "Guest";
+  return localStorage.getItem(DISPLAY_NAME_KEY) || "Guest";
 }
 
 export default function MeetingModal({
@@ -123,9 +130,13 @@ export default function MeetingModal({
       }),
       duration: "30 min",
       link,
-      host: joinName.trim() || "Guest",
+      host: joinName.trim() || getDisplayName(),
       participants: 1,
     });
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(DISPLAY_NAME_KEY, joinName.trim());
+    }
 
     onOpenChange(false);
     router.push(`/meeting/${joinId.trim()}/lobby`);
@@ -138,6 +149,7 @@ export default function MeetingModal({
     const dateObj = hasSchedule
       ? new Date(`${newScheduleDate}T${newScheduleTime}`)
       : new Date();
+    const displayName = getDisplayName();
 
     addMeeting({
       id: newId,
@@ -151,7 +163,7 @@ export default function MeetingModal({
           }),
       duration: "30 min",
       link: generateMeetingLink(newId),
-      host: "Alex Johnson",
+      host: displayName,
       participants: 1,
     });
 
@@ -258,7 +270,7 @@ export default function MeetingModal({
                 className="bg-[#0B5CFF] hover:bg-[#0B5CFF]/90 text-white"
               >
                 <Icon name="LogIn" className="w-4 h-4 mr-1.5" />
-                Join Meeting
+                Join
               </Button>
             </div>
           </TabsContent>
@@ -327,8 +339,8 @@ export default function MeetingModal({
               <div className="text-xs text-[#64748B] mb-1">Meeting ID</div>
               <code className="text-sm font-mono text-[#0F172A]">{newId}</code>
               <div className="text-xs text-[#64748B] mt-2 mb-1">Shareable Link</div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-sm text-[#0F172A] truncate">
+              <div className="flex items-center gap-2 min-w-0">
+                <code className="flex-1 text-sm text-[#0F172A] truncate min-w-0">
                   {generateMeetingLink(newId)}
                 </code>
                 <Button

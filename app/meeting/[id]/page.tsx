@@ -9,6 +9,8 @@ import { usePermissions } from "@/hooks/use-permissions";
 import VideoGrid from "@/components/call/VideoGrid";
 import ControlBar from "@/components/call/ControlBar";
 import ParticipantsPanel from "@/components/call/ParticipantsPanel";
+import ChatPanel from "@/components/call/ChatPanel";
+import HostSettingsModal from "@/components/call/HostSettingsModal";
 import ReconnectBanner from "@/components/call/ReconnectBanner";
 import EmptyRoomState from "@/components/call/EmptyRoomState";
 import Icon from "@/components/Icon";
@@ -19,14 +21,18 @@ export default function MeetingRoomPage() {
   const meetingId = (params.id as string) || "";
 
   const [initialized, setInitialized] = useState(false);
-  const [participantsOpen, setParticipantsOpen] = useState(false);
   const [showHostLeft, setShowHostLeft] = useState(false);
 
   const setLocalStream = useMeetingStore((s) => s.setLocalStream);
   const setLocalParticipant = useMeetingStore((s) => s.setLocalParticipant);
+  const setParticipantsOpen = useMeetingStore((s) => s.setParticipantsOpen);
+  const setChatOpen = useMeetingStore((s) => s.setChatOpen);
   const reset = useMeetingStore((s) => s.reset);
   const remotePeers = useMeetingStore((s) => s.remotePeers);
   const localParticipant = useMeetingStore((s) => s.localParticipant);
+  const isChatOpen = useMeetingStore((s) => s.isChatOpen);
+  const isParticipantsOpen = useMeetingStore((s) => s.isParticipantsOpen);
+  const settings = useMeetingStore((s) => s.settings);
 
   const { perms, isBlocked } = usePermissions();
 
@@ -124,6 +130,13 @@ export default function MeetingRoomPage() {
   };
 
   const hasRemotePeers = Object.keys(remotePeers).length > 0;
+  const mainContentClass = [
+    "flex-1 min-h-0 p-4 pb-28 sm:pb-24 relative transition-all",
+    isParticipantsOpen ? "sm:pr-80" : "",
+    isChatOpen ? "sm:pl-0" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div className="dark min-h-screen bg-[#0B1120] flex flex-col">
@@ -165,7 +178,7 @@ export default function MeetingRoomPage() {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 min-h-0 p-4 pb-28 sm:pb-24 relative">
+      <div className={mainContentClass}>
         {hasRemotePeers ? (
           <VideoGrid />
         ) : (
@@ -174,13 +187,15 @@ export default function MeetingRoomPage() {
       </div>
 
       {/* Floating Control Bar */}
-      <ControlBar onToggleParticipants={() => setParticipantsOpen((v) => !v)} />
+      <ControlBar />
 
-      {/* Participants Panel */}
+      {/* Side Panels & Modals */}
       <ParticipantsPanel
-        open={participantsOpen}
+        open={isParticipantsOpen}
         onOpenChange={setParticipantsOpen}
       />
+      <ChatPanel />
+      <HostSettingsModal />
 
       {/* Meeting info strip */}
       <div className="flex items-center justify-between px-5 py-2 bg-[#0B1120] border-t border-white/[0.06]">

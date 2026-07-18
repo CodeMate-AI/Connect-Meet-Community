@@ -37,10 +37,14 @@ export default function ParticipantsPanel({
 }: ParticipantsPanelProps) {
   const localParticipant = useMeetingStore((s) => s.localParticipant);
   const remotePeers = useMeetingStore((s) => s.remotePeers);
-  const removeRemotePeer = useMeetingStore((s) => s.removeRemotePeer);
+  const setParticipantsOpen = useMeetingStore((s) => s.setParticipantsOpen);
 
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setParticipantsOpen(open);
+  }, [open, setParticipantsOpen]);
 
   const participants = useMemo(() => {
     const list: {
@@ -97,13 +101,15 @@ export default function ParticipantsPanel({
   }, [participants, search]);
 
   const handRaisedCount = participants.filter((p) => p.handRaised).length;
+  const remoteIds = Object.keys(remotePeers);
 
   const handleMuteAll = () => {
     Object.values(remotePeers).forEach((peer) => {
       try {
-        const data: Record<string, unknown> = { muted: true };
         if (peer.dataChannel?.readyState === "open") {
-          peer.dataChannel.send(JSON.stringify(data));
+          peer.dataChannel.send(
+            JSON.stringify({ type: "command", action: "mute", targetId: peer.id })
+          );
         }
       } catch {
         // ignore send errors
@@ -115,9 +121,10 @@ export default function ParticipantsPanel({
     const peer = remotePeers[peerId];
     if (!peer) return;
     try {
-      const data: Record<string, unknown> = { muted: true };
       if (peer.dataChannel?.readyState === "open") {
-        peer.dataChannel.send(JSON.stringify(data));
+        peer.dataChannel.send(
+          JSON.stringify({ type: "command", action: "mute", targetId: peerId })
+        );
       }
     } catch {
       // ignore
@@ -126,7 +133,17 @@ export default function ParticipantsPanel({
   };
 
   const handleRemoveRemote = (peerId: string) => {
-    removeRemotePeer(peerId);
+    const peer = remotePeers[peerId];
+    if (!peer) return;
+    try {
+      if (peer.dataChannel?.readyState === "open") {
+        peer.dataChannel.send(
+          JSON.stringify({ type: "command", action: "kick", targetId: peerId })
+        );
+      }
+    } catch {
+      // ignore
+    }
     setExpandedId(null);
   };
 

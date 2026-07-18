@@ -1,11 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { useMeetingStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { useMeetingStore, type ChatMessage, type PeerState } from "@/lib/store";
 import {
   createPeerConnection,
   negotiateOffer,
 } from "@/lib/webrtc";
+
+type DataChannelMessage =
+  | { type: "state-sync"; state: Partial<PeerState> }
+  | { type: "chat"; message: ChatMessage }
+  | { type: "command"; action: "mute" | "kick"; targetId: string }
+  | {
+      type: "settings-sync";
+      settings: {
+        screenShareAllowed: boolean;
+        unmuteAllowed: boolean;
+        chatAllowed: boolean;
+      };
+    };
 
 type SignalMessage =
   | { type: "discover"; from: string }
@@ -19,10 +34,62 @@ function generatePeerId(): string {
 }
 
 export function useSignaling(meetingId: string) {
+  const router = useRouter();
   const channelRef = useRef<BroadcastChannel | null>(null);
   const myIdRef = useRef<string>(generatePeerId());
 
   const localParticipant = useMeetingStore((s) => s.localParticipant);
+
+  const applyDataMessage = useCallback(
+    (peerId: string, raw: unknown) => {
+      const message = raw as DataChannelMessage;
+      if (!message || typeof message !== "object") return;
+
+      const store = useMeetingStore.getState();
+      switch (message.type) {
+        case "state-sync":
+          store.updateRemotePeerState(peerId, message.state);
+          break;
+        case "chat":
+          store.addChatMessage(message.message);
+          if (!store.isChatOpen) {
+            toast.info(`New chat message from ${message.message.senderName}`);
+          }
+          break;
+        case "command":
+          if (message.targetId !== store.localParticipant.id) return;
+          if (message.action === "mute") {
+            store.localStream?.getAudioTracks().forEach((track) => {
+              track.enabled = false;
+            });
+            store.setLocalParticipant({ muted: true });
+            toast.message("You have been muted by the host.");
+          }
+          if (message.action === "kick") {
+            store.reset();
+            router.push("/?kicked=true");
+          }
+          break;
+        case "settings-sync":
+          store.setSettings({
+            isScreenShareAllowed: message.settings.screenShareAllowed,
+            isUnmuteAllowed: message.settings.unmuteAllowed,
+            isChatAllowed: message.settings.chatAllowed,
+          });
+          break;
+      }
+    },
+    [router]
+  );
+
+  const sendToPeers = useCallback((payload: DataChannelMessage) => {
+    const peers = useMeetingStore.getState().remotePeers;
+    Object.values(peers).forEach((peer) => {
+      if (peer.dataChannel?.readyState === "open") {
+        peer.dataChannel.send(JSON.stringify(payload));
+      }
+    });
+  }, []);
 
   const createPeer = useCallback((peerId: string, isInitiator: boolean) => {
     const pc = createPeerConnection();
@@ -73,8 +140,7 @@ export function useSignaling(meetingId: string) {
       };
       dc.onmessage = (ev) => {
         try {
-          const data = JSON.parse(ev.data);
-          useMeetingStore.getState().updateRemotePeerState(peerId, data);
+          applyDataMessage(peerId, JSON.parse(ev.data));
         } catch {
           // non-JSON payload ignored
         }
@@ -107,8 +173,7 @@ export function useSignaling(meetingId: string) {
         };
         dc.onmessage = (e) => {
           try {
-            const data = JSON.parse(e.data);
-            useMeetingStore.getState().updateRemotePeerState(peerId, data);
+            applyDataMessage(peerId, JSON.parse(e.data));
           } catch {
             // non-JSON payload ignored
           }
@@ -146,7 +211,7 @@ export function useSignaling(meetingId: string) {
     }
 
     return pc;
-  }, []);
+  }, [applyDataMessage]);
 
   useEffect(() => {
     if (!meetingId) return;
@@ -161,7 +226,9 @@ export function useSignaling(meetingId: string) {
 
       switch (msg.type) {
         case "discover": {
-          const existing = useMeetingStore.getState().remotePeers[msg.from];
+          const store = useMeetingStore.getState();
+          if (store.settings.meetingLocked) return;
+          const existing = store.remotePeers[msg.from];
           if (existing) return;
 
           const pc = createPeer(msg.from, true);
@@ -259,12 +326,7 @@ export function useSignaling(meetingId: string) {
       isHost: localParticipant.isHost,
     };
 
-    const peers = useMeetingStore.getState().remotePeers;
-    Object.values(peers).forEach((peer) => {
-      if (peer.dataChannel?.readyState === "open") {
-        peer.dataChannel.send(JSON.stringify(state));
-      }
-    });
+    sendToPeers({ type: "state-sync", state });
   }, [
     localParticipant.name,
     localParticipant.muted,
@@ -273,6 +335,7 @@ export function useSignaling(meetingId: string) {
     localParticipant.reaction,
     localParticipant.screenSharing,
     localParticipant.isHost,
+    sendToPeers,
   ]);
 
   return { myId: myIdRef.current };

@@ -20,6 +20,13 @@ import {
   generateMeetingLink,
 } from "@/lib/meetings";
 
+const DISPLAY_NAME_KEY = "connectmeet_display_name";
+
+function getDisplayName(): string {
+  if (typeof window === "undefined") return "Guest";
+  return localStorage.getItem(DISPLAY_NAME_KEY) || "Guest";
+}
+
 export default function QuickActions() {
   const router = useRouter();
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
@@ -58,6 +65,7 @@ export default function QuickActions() {
     if (scheduleTitle && scheduleDate && scheduleTime) {
       const id = generateMeetingId();
       const dateObj = new Date(`${scheduleDate}T${scheduleTime}`);
+      const displayName = getDisplayName();
       addMeeting({
         id,
         title: scheduleTitle,
@@ -65,7 +73,7 @@ export default function QuickActions() {
         time: scheduleTime,
         duration: "30 min",
         link: generateMeetingLink(id),
-        host: "Alex Johnson",
+        host: displayName,
         participants: 1,
       });
       setScheduleOpen(false);
@@ -159,8 +167,8 @@ export default function QuickActions() {
           <div className="flex flex-col gap-4 py-2">
             <div className="p-3 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]">
               <div className="text-xs text-[#64748B] mb-1">Meeting Link</div>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-sm text-[#0F172A] truncate">
+              <div className="flex items-center gap-2 min-w-0">
+                <code className="flex-1 text-sm text-[#0F172A] truncate min-w-0">
                   {generateMeetingLink(generatedId)}
                 </code>
                 <Button

@@ -51,14 +51,6 @@ export default function Sidebar() {
           </Link>
         ))}
       </nav>
-
-      {/* Bottom hint */}
-      <div className="px-4 py-4 border-t border-[#E2E8F0]">
-        <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
-          <Icon name="Info" className="w-4 h-4" />
-          <span>v1.0.0 — Connected</span>
-        </div>
-      </div>
     </aside>
   );
 }

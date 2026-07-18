@@ -10,19 +10,21 @@ import { cn } from "@/lib/utils";
 
 const REACTIONS = ["👍", "❤️", "🎉", "😂", "👏"];
 
-interface ControlBarProps {
-  onToggleParticipants: () => void;
-}
-
-export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
+export default function ControlBar() {
   const router = useRouter();
 
   const localParticipant = useMeetingStore((s) => s.localParticipant);
   const localStream = useMeetingStore((s) => s.localStream);
   const screenStream = useMeetingStore((s) => s.screenStream);
   const remotePeers = useMeetingStore((s) => s.remotePeers);
+  const settings = useMeetingStore((s) => s.settings);
+  const isChatOpen = useMeetingStore((s) => s.isChatOpen);
+  const isParticipantsOpen = useMeetingStore((s) => s.isParticipantsOpen);
   const setLocalParticipant = useMeetingStore((s) => s.setLocalParticipant);
   const setScreenStream = useMeetingStore((s) => s.setScreenStream);
+  const setChatOpen = useMeetingStore((s) => s.setChatOpen);
+  const setParticipantsOpen = useMeetingStore((s) => s.setParticipantsOpen);
+  const setHostSettingsOpen = useMeetingStore((s) => s.setHostSettingsOpen);
   const reset = useMeetingStore((s) => s.reset);
 
   const [showReactions, setShowReactions] = useState(false);
@@ -50,40 +52,47 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
   const toggleMic = useCallback(() => {
     if (!localStream) return;
     const next = !localParticipant.muted;
+    if (next && !settings.isUnmuteAllowed) return;
     localStream.getAudioTracks().forEach((t) => {
       t.enabled = !next;
     });
     setLocalParticipant({ muted: next });
-  }, [localStream, localParticipant.muted, setLocalParticipant]);
+  }, [localStream, localParticipant.muted, settings.isUnmuteAllowed, setLocalParticipant]);
 
   const toggleCamera = useCallback(() => {
     if (!localStream) return;
     const next = !localParticipant.videoOff;
+    if (next && !settings.isVideoAllowed) return;
     localStream.getVideoTracks().forEach((t) => {
       t.enabled = !next;
     });
     setLocalParticipant({ videoOff: next });
-  }, [localStream, localParticipant.videoOff, setLocalParticipant]);
+  }, [localStream, localParticipant.videoOff, settings.isVideoAllowed, setLocalParticipant]);
+
+  const stopScreenShare = useCallback(() => {
+    if (!screenStream) return;
+    screenStream.getTracks().forEach((t) => t.stop());
+    setScreenStream(null);
+    setLocalParticipant({ screenSharing: false });
+
+    const camStream = useMeetingStore.getState().localStream;
+    if (camStream) {
+      const videoTrack = camStream.getVideoTracks()[0];
+      if (videoTrack) {
+        Object.values(useMeetingStore.getState().remotePeers).forEach((peer) => {
+          replaceTrack(peer.connection, videoTrack);
+        });
+      }
+    }
+  }, [screenStream, setScreenStream, setLocalParticipant]);
 
   const toggleScreenShare = useCallback(async () => {
     if (screenStream) {
-      screenStream.getTracks().forEach((t) => t.stop());
-      setScreenStream(null);
-      setLocalParticipant({ screenSharing: false });
-
-      const camStream = useMeetingStore.getState().localStream;
-      if (camStream) {
-        const videoTrack = camStream.getVideoTracks()[0];
-        if (videoTrack) {
-          Object.values(useMeetingStore.getState().remotePeers).forEach(
-            (peer) => {
-              replaceTrack(peer.connection, videoTrack);
-            }
-          );
-        }
-      }
+      stopScreenShare();
       return;
     }
+
+    if (!settings.isScreenShareAllowed) return;
 
     try {
       const sStream = await startScreenShare();
@@ -92,20 +101,17 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
 
       const vTrack = sStream.getVideoTracks()[0];
       if (vTrack) {
-        Object.values(useMeetingStore.getState().remotePeers).forEach(
-          (peer) => {
-            replaceTrack(peer.connection, vTrack);
-          }
-        );
+        Object.values(useMeetingStore.getState().remotePeers).forEach((peer) => {
+          replaceTrack(peer.connection, vTrack);
+        });
+        vTrack.onended = () => {
+          stopScreenShare();
+        };
       }
-
-      vTrack.onended = () => {
-        toggleScreenShare();
-      };
     } catch (err) {
       console.error("Screen share failed:", err);
     }
-  }, [screenStream, setScreenStream, setLocalParticipant]);
+  }, [screenStream, settings.isScreenShareAllowed, setScreenStream, setLocalParticipant, stopScreenShare]);
 
   const toggleHand = useCallback(() => {
     setLocalParticipant({ handRaised: !localParticipant.handRaised });
@@ -131,12 +137,17 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
     icon: IconName,
     label: string,
     active: boolean,
-    onClick: () => void
+    onClick: () => void,
+    disabled = false
   ) => (
     <button
       key={label}
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
+      disabled={disabled}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 group touch-manipulation",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
       title={label}
     >
       <div
@@ -144,7 +155,8 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
           "flex items-center justify-center rounded-full transition-colors min-h-[44px] min-w-[44px]",
           active
             ? "bg-white/10 text-white hover:bg-white/20"
-            : "bg-red-500/80 text-white hover:bg-red-500"
+            : "bg-red-500/80 text-white hover:bg-red-500",
+          disabled && "hover:bg-white/10"
         )}
       >
         <Icon name={icon} className="w-5 h-5" />
@@ -163,13 +175,15 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
           localParticipant.muted ? "MicOff" : "Mic",
           localParticipant.muted ? "Unmute" : "Mute",
           !localParticipant.muted,
-          toggleMic
+          toggleMic,
+          localParticipant.muted && !settings.isUnmuteAllowed
         )}
         {avBtn(
           localParticipant.videoOff ? "VideoOff" : "Video",
           localParticipant.videoOff ? "Start Video" : "Stop Video",
           !localParticipant.videoOff,
-          toggleCamera
+          toggleCamera,
+          localParticipant.videoOff && !settings.isVideoAllowed
         )}
 
         <div className="hidden sm:block w-px h-8 bg-white/10 mx-1" />
@@ -178,7 +192,7 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
         <div className="hidden sm:flex items-center gap-1 sm:gap-2">
           {/* Participants */}
           <button
-            onClick={onToggleParticipants}
+            onClick={() => setParticipantsOpen(!isParticipantsOpen)}
             className="flex flex-col items-center justify-center gap-1 group relative touch-manipulation"
             title="Participants"
           >
@@ -194,8 +208,16 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
           </button>
 
           {/* Chat */}
-          <button className="flex flex-col items-center justify-center gap-1 group touch-manipulation" title="Chat">
-            <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
+          <button
+            onClick={() => setChatOpen(!isChatOpen)}
+            className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
+            title="Chat"
+            disabled={!settings.isChatAllowed}
+          >
+            <div className={cn(
+              "flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-white transition-colors",
+              settings.isChatAllowed ? "bg-white/10 hover:bg-white/20" : "bg-white/5"
+            )}>
               <Icon name="MessageSquare" className="w-5 h-5" />
             </div>
             <span className="text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
@@ -237,12 +259,17 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
             "MonitorUp",
             localParticipant.screenSharing ? "Stop Share" : "Share",
             !localParticipant.screenSharing,
-            toggleScreenShare
+            toggleScreenShare,
+            !localParticipant.screenSharing && !settings.isScreenShareAllowed
           )}
 
           {/* Host Shield */}
           {localParticipant.isHost && (
-            <button className="flex flex-col items-center justify-center gap-1 group touch-manipulation" title="Host Controls">
+            <button
+              onClick={() => setHostSettingsOpen(true)}
+              className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
+              title="Host Controls"
+            >
               <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
                 <Icon name="Shield" className="w-5 h-5" />
               </div>
@@ -274,7 +301,7 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-2 px-4 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-xl">
               <button
                 onClick={() => {
-                  onToggleParticipants();
+                  setParticipantsOpen(!isParticipantsOpen);
                   setShowMore(false);
                 }}
                 className="flex flex-col items-center gap-1"
@@ -288,10 +315,19 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
                 <span className="text-[9px] text-[#94A3B8]">People</span>
               </button>
               <button
-                onClick={() => setShowMore(false)}
+                onClick={() => {
+                  if (settings.isChatAllowed) {
+                    setChatOpen(!isChatOpen);
+                  }
+                  setShowMore(false);
+                }}
                 className="flex flex-col items-center gap-1"
+                disabled={!settings.isChatAllowed}
               >
-                <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
+                <div className={cn(
+                  "flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-white",
+                  settings.isChatAllowed ? "bg-white/10" : "bg-white/5"
+                )}>
                   <Icon name="MessageSquare" className="w-4 h-4" />
                 </div>
                 <span className="text-[9px] text-[#94A3B8]">Chat</span>
@@ -302,12 +338,27 @@ export default function ControlBar({ onToggleParticipants }: ControlBarProps) {
                   setShowMore(false);
                 }}
                 className="flex flex-col items-center gap-1"
+                disabled={!settings.isScreenShareAllowed && !localParticipant.screenSharing}
               >
                 <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
                   <Icon name="MonitorUp" className="w-4 h-4" />
                 </div>
                 <span className="text-[9px] text-[#94A3B8]">Share</span>
               </button>
+              {localParticipant.isHost && (
+                <button
+                  onClick={() => {
+                    setHostSettingsOpen(true);
+                    setShowMore(false);
+                  }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
+                    <Icon name="Shield" className="w-4 h-4" />
+                  </div>
+                  <span className="text-[9px] text-[#94A3B8]">Host</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   toggleHand();

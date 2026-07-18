@@ -23,15 +23,41 @@ export interface LocalParticipant extends PeerState {
   pinnedId: string | null;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface MeetingSettings {
+  isScreenShareAllowed: boolean;
+  isVideoAllowed: boolean;
+  isUnmuteAllowed: boolean;
+  isChatAllowed: boolean;
+  meetingLocked: boolean;
+}
+
 interface MeetingStore {
   localStream: MediaStream | null;
   screenStream: MediaStream | null;
   remotePeers: Record<string, RemotePeer>;
   localParticipant: LocalParticipant;
+  chatMessages: ChatMessage[];
+  isChatOpen: boolean;
+  isParticipantsOpen: boolean;
+  isHostSettingsOpen: boolean;
+  settings: MeetingSettings;
 
   setLocalStream: (stream: MediaStream | null) => void;
   setScreenStream: (stream: MediaStream | null) => void;
   setLocalParticipant: (participant: Partial<LocalParticipant>) => void;
+  setChatOpen: (open: boolean) => void;
+  setParticipantsOpen: (open: boolean) => void;
+  setHostSettingsOpen: (open: boolean) => void;
+  setSettings: (settings: Partial<MeetingSettings>) => void;
+  addChatMessage: (message: ChatMessage) => void;
 
   addRemotePeer: (peer: RemotePeer) => void;
   removeRemotePeer: (id: string) => void;
@@ -53,11 +79,24 @@ const DEFAULT_PARTICIPANT: LocalParticipant = {
   pinnedId: null,
 };
 
+const DEFAULT_SETTINGS: MeetingSettings = {
+  isScreenShareAllowed: true,
+  isVideoAllowed: true,
+  isUnmuteAllowed: true,
+  isChatAllowed: true,
+  meetingLocked: false,
+};
+
 export const useMeetingStore = create<MeetingStore>((set, get) => ({
   localStream: null,
   screenStream: null,
   remotePeers: {},
   localParticipant: { ...DEFAULT_PARTICIPANT },
+  chatMessages: [],
+  isChatOpen: false,
+  isParticipantsOpen: false,
+  isHostSettingsOpen: false,
+  settings: { ...DEFAULT_SETTINGS },
 
   setLocalStream: (stream) => set({ localStream: stream }),
 
@@ -66,6 +105,22 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
   setLocalParticipant: (participant) =>
     set((state) => ({
       localParticipant: { ...state.localParticipant, ...participant },
+    })),
+
+  setChatOpen: (open) => set({ isChatOpen: open }),
+
+  setParticipantsOpen: (open) => set({ isParticipantsOpen: open }),
+
+  setHostSettingsOpen: (open) => set({ isHostSettingsOpen: open }),
+
+  setSettings: (settings) =>
+    set((state) => ({
+      settings: { ...state.settings, ...settings },
+    })),
+
+  addChatMessage: (message) =>
+    set((state) => ({
+      chatMessages: [...state.chatMessages, message],
     })),
 
   addRemotePeer: (peer) =>
@@ -128,6 +183,11 @@ export const useMeetingStore = create<MeetingStore>((set, get) => ({
       screenStream: null,
       remotePeers: {},
       localParticipant: { ...DEFAULT_PARTICIPANT },
+      chatMessages: [],
+      isChatOpen: false,
+      isParticipantsOpen: false,
+      isHostSettingsOpen: false,
+      settings: { ...DEFAULT_SETTINGS },
     });
   },
 }));
