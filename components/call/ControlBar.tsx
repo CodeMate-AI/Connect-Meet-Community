@@ -1,137 +1,88 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useMeetingStore } from "@/lib/store";
-import { startScreenShare, replaceTrack } from "@/lib/webrtc";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMeeting, usePubSub } from "@videosdk.live/react-sdk";
+import { cn } from "@/lib/utils";
 import Icon from "@/components/Icon";
 import type { IconName } from "@/components/Icon";
-import { cn } from "@/lib/utils";
 
 const REACTIONS = ["👍", "❤️", "🎉", "😂", "👏"];
 
-export default function ControlBar() {
-  const router = useRouter();
+type ControlBarProps = {
+  onLeave: () => void;
+  participantsOpen: boolean;
+  onParticipantsOpenChange: (open: boolean) => void;
+  chatOpen: boolean;
+  onChatOpenChange: (open: boolean) => void;
+  localParticipantId: string;
+};
 
-  const localParticipant = useMeetingStore((s) => s.localParticipant);
-  const localStream = useMeetingStore((s) => s.localStream);
-  const screenStream = useMeetingStore((s) => s.screenStream);
-  const remotePeers = useMeetingStore((s) => s.remotePeers);
-  const settings = useMeetingStore((s) => s.settings);
-  const isChatOpen = useMeetingStore((s) => s.isChatOpen);
-  const isParticipantsOpen = useMeetingStore((s) => s.isParticipantsOpen);
-  const setLocalParticipant = useMeetingStore((s) => s.setLocalParticipant);
-  const setScreenStream = useMeetingStore((s) => s.setScreenStream);
-  const setChatOpen = useMeetingStore((s) => s.setChatOpen);
-  const setParticipantsOpen = useMeetingStore((s) => s.setParticipantsOpen);
-  const setHostSettingsOpen = useMeetingStore((s) => s.setHostSettingsOpen);
-  const reset = useMeetingStore((s) => s.reset);
+export default function ControlBar({
+  onLeave,
+  participantsOpen,
+  onParticipantsOpenChange,
+  chatOpen,
+  onChatOpenChange,
+  localParticipantId,
+}: ControlBarProps) {
+  const meeting = useMeeting();
+  const { publish: publishRaiseHand } = usePubSub("RAISE_HAND");
+  const { publish: publishReactions } = usePubSub("REACTIONS");
 
   const [showReactions, setShowReactions] = useState(false);
   const [showMore, setShowMore] = useState(false);
-
   const reactionsRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (
-        reactionsRef.current &&
-        !reactionsRef.current.contains(e.target as Node)
-      ) {
+      if (reactionsRef.current && !reactionsRef.current.contains(e.target as Node)) {
         setShowReactions(false);
       }
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
         setShowMore(false);
       }
     };
+
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const participantCount = useMemo(() => meeting.participants.size, [meeting.participants]);
+
   const toggleMic = useCallback(() => {
-    if (!localStream) return;
-    const next = !localParticipant.muted;
-    if (next && !settings.isUnmuteAllowed) return;
-    localStream.getAudioTracks().forEach((t) => {
-      t.enabled = !next;
-    });
-    setLocalParticipant({ muted: next });
-  }, [localStream, localParticipant.muted, settings.isUnmuteAllowed, setLocalParticipant]);
+    meeting.localMicOn ? meeting.muteMic() : meeting.unmuteMic();
+  }, [meeting]);
 
   const toggleCamera = useCallback(() => {
-    if (!localStream) return;
-    const next = !localParticipant.videoOff;
-    if (next && !settings.isVideoAllowed) return;
-    localStream.getVideoTracks().forEach((t) => {
-      t.enabled = !next;
-    });
-    setLocalParticipant({ videoOff: next });
-  }, [localStream, localParticipant.videoOff, settings.isVideoAllowed, setLocalParticipant]);
+    meeting.localWebcamOn ? meeting.disableWebcam() : meeting.enableWebcam();
+  }, [meeting]);
 
-  const stopScreenShare = useCallback(() => {
-    if (!screenStream) return;
-    screenStream.getTracks().forEach((t) => t.stop());
-    setScreenStream(null);
-    setLocalParticipant({ screenSharing: false });
-
-    const camStream = useMeetingStore.getState().localStream;
-    if (camStream) {
-      const videoTrack = camStream.getVideoTracks()[0];
-      if (videoTrack) {
-        Object.values(useMeetingStore.getState().remotePeers).forEach((peer) => {
-          replaceTrack(peer.connection, videoTrack);
-        });
-      }
-    }
-  }, [screenStream, setScreenStream, setLocalParticipant]);
-
-  const toggleScreenShare = useCallback(async () => {
-    if (screenStream) {
-      stopScreenShare();
-      return;
-    }
-
-    if (!settings.isScreenShareAllowed) return;
-
-    try {
-      const sStream = await startScreenShare();
-      setScreenStream(sStream);
-      setLocalParticipant({ screenSharing: true });
-
-      const vTrack = sStream.getVideoTracks()[0];
-      if (vTrack) {
-        Object.values(useMeetingStore.getState().remotePeers).forEach((peer) => {
-          replaceTrack(peer.connection, vTrack);
-        });
-        vTrack.onended = () => {
-          stopScreenShare();
-        };
-      }
-    } catch (err) {
-      console.error("Screen share failed:", err);
-    }
-  }, [screenStream, settings.isScreenShareAllowed, setScreenStream, setLocalParticipant, stopScreenShare]);
+  const toggleScreenShare = useCallback(() => {
+    meeting.localScreenShareOn
+      ? meeting.disableScreenShare()
+      : meeting.enableScreenShare();
+  }, [meeting]);
 
   const toggleHand = useCallback(() => {
-    setLocalParticipant({ handRaised: !localParticipant.handRaised });
-  }, [localParticipant.handRaised, setLocalParticipant]);
+    const raised = !meeting.participants.has(localParticipantId)
+      ? false
+      : true;
+    void publishRaiseHand(raised ? "raise" : "lower", {
+      persist: true,
+    }, { raised, participantId: localParticipantId });
+  }, [localParticipantId, meeting.participants, publishRaiseHand]);
 
   const sendReaction = useCallback(
     (emoji: string) => {
-      setLocalParticipant({ reaction: emoji });
       setShowReactions(false);
-      setTimeout(() => setLocalParticipant({ reaction: null }), 3000);
+      void publishReactions(emoji, { persist: false }, {
+        emoji,
+        expiresAt: Date.now() + 2200,
+      });
     },
-    [setLocalParticipant]
+    [publishReactions]
   );
-
-  const handleLeave = useCallback(() => {
-    reset();
-    router.push("/");
-  }, [reset, router]);
-
-  const participantCount = 1 + Object.keys(remotePeers).length;
 
   const avBtn = (
     icon: IconName,
@@ -152,163 +103,141 @@ export default function ControlBar() {
     >
       <div
         className={cn(
-          "flex items-center justify-center rounded-full transition-colors min-h-[44px] min-w-[44px]",
+          "flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-colors",
           active
             ? "bg-white/10 text-white hover:bg-white/20"
             : "bg-red-500/80 text-white hover:bg-red-500",
           disabled && "hover:bg-white/10"
         )}
       >
-        <Icon name={icon} className="w-5 h-5" />
+        <Icon name={icon} className="h-5 w-5" />
       </div>
-      <span className="hidden sm:block text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
+      <span className="hidden text-[10px] text-[#94A3B8] transition-colors group-hover:text-white sm:block">
         {label}
       </span>
     </button>
   );
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-      <div className="flex items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full bg-black/60 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/40">
-        {/* AV Controls */}
+    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+      <div className="flex items-center gap-1 rounded-full border border-white/10 bg-black/60 px-3 py-2 shadow-2xl shadow-black/40 backdrop-blur-xl sm:gap-2 sm:px-4 sm:py-2.5">
         {avBtn(
-          localParticipant.muted ? "MicOff" : "Mic",
-          localParticipant.muted ? "Unmute" : "Mute",
-          !localParticipant.muted,
-          toggleMic,
-          localParticipant.muted && !settings.isUnmuteAllowed
+          meeting.localMicOn ? "Mic" : "MicOff",
+          meeting.localMicOn ? "Mute" : "Unmute",
+          meeting.localMicOn,
+          toggleMic
         )}
         {avBtn(
-          localParticipant.videoOff ? "VideoOff" : "Video",
-          localParticipant.videoOff ? "Start Video" : "Stop Video",
-          !localParticipant.videoOff,
-          toggleCamera,
-          localParticipant.videoOff && !settings.isVideoAllowed
+          meeting.localWebcamOn ? "Video" : "VideoOff",
+          meeting.localWebcamOn ? "Stop Video" : "Start Video",
+          meeting.localWebcamOn,
+          toggleCamera
         )}
 
-        <div className="hidden sm:block w-px h-8 bg-white/10 mx-1" />
+        <div className="hidden h-8 w-px bg-white/10 sm:block" />
 
-        {/* Meeting Controls — Desktop */}
-        <div className="hidden sm:flex items-center gap-1 sm:gap-2">
-          {/* Participants */}
+        <div className="hidden items-center gap-1 sm:flex sm:gap-2">
           <button
-            onClick={() => setParticipantsOpen(!isParticipantsOpen)}
-            className="flex flex-col items-center justify-center gap-1 group relative touch-manipulation"
+            onClick={() => onParticipantsOpenChange(!participantsOpen)}
+            className="group flex flex-col items-center justify-center gap-1 touch-manipulation"
             title="Participants"
           >
-            <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
-              <Icon name="Users" className="w-5 h-5" />
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[#0B5CFF] text-white text-[10px] font-bold px-1">
+            <div className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+              <Icon name="Users" className="h-5 w-5" />
+              <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#0B5CFF] px-1 text-[10px] font-bold text-white">
                 {participantCount}
               </span>
             </div>
-            <span className="text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
+            <span className="text-[10px] text-[#94A3B8] transition-colors group-hover:text-white">
               People
             </span>
           </button>
 
-          {/* Chat */}
           <button
-            onClick={() => setChatOpen(!isChatOpen)}
-            className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
+            onClick={() => onChatOpenChange(!chatOpen)}
+            className="group flex flex-col items-center justify-center gap-1 touch-manipulation"
             title="Chat"
-            disabled={!settings.isChatAllowed}
           >
-            <div className={cn(
-              "flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-white transition-colors",
-              settings.isChatAllowed ? "bg-white/10 hover:bg-white/20" : "bg-white/5"
-            )}>
-              <Icon name="MessageSquare" className="w-5 h-5" />
+            <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+              <Icon name="MessageSquare" className="h-5 w-5" />
             </div>
-            <span className="text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
+            <span className="text-[10px] text-[#94A3B8] transition-colors group-hover:text-white">
               Chat
             </span>
           </button>
 
-          {/* Reactions */}
           <div className="relative" ref={reactionsRef}>
             <button
-              onClick={() => setShowReactions(!showReactions)}
-              className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
+              onClick={() => setShowReactions((current) => !current)}
+              className="group flex flex-col items-center justify-center gap-1 touch-manipulation"
               title="Reactions"
             >
-              <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
-                <Icon name="Smile" className="w-5 h-5" />
+              <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20">
+                <Icon name="Smile" className="h-5 w-5" />
               </div>
-              <span className="text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
+              <span className="text-[10px] text-[#94A3B8] transition-colors group-hover:text-white">
                 React
               </span>
             </button>
-            {showReactions && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-1 px-3 py-2 rounded-full bg-black/80 backdrop-blur-xl border border-white/10 shadow-xl">
+            {showReactions ? (
+              <div className="absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/80 px-3 py-2 shadow-xl backdrop-blur-xl">
                 {REACTIONS.map((emoji) => (
                   <button
                     key={emoji}
                     onClick={() => sendReaction(emoji)}
-                    className="min-h-[44px] min-w-[44px] flex items-center justify-center text-xl hover:scale-125 transition-transform select-none"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center select-none text-xl transition-transform hover:scale-125"
                   >
                     {emoji}
                   </button>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Share Screen */}
           {avBtn(
             "MonitorUp",
-            localParticipant.screenSharing ? "Stop Share" : "Share",
-            !localParticipant.screenSharing,
-            toggleScreenShare,
-            !localParticipant.screenSharing && !settings.isScreenShareAllowed
+            meeting.localScreenShareOn ? "Stop Share" : "Share",
+            meeting.localScreenShareOn,
+            toggleScreenShare
           )}
 
-          {/* Host Shield */}
-          {localParticipant.isHost && (
-            <button
-              onClick={() => setHostSettingsOpen(true)}
-              className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
-              title="Host Controls"
-            >
-              <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
-                <Icon name="Shield" className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
-                Host
-              </span>
-            </button>
-          )}
-
-          {/* Raise Hand */}
-          {avBtn(
-            "Hand",
-            localParticipant.handRaised ? "Lower Hand" : "Raise Hand",
-            !localParticipant.handRaised,
-            toggleHand
-          )}
+          <button
+            onClick={() => {
+              onLeave();
+              meeting.leave();
+            }}
+            className="group flex flex-col items-center justify-center gap-1 touch-manipulation"
+            title="Leave meeting"
+          >
+            <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600">
+              <Icon name="PhoneOff" className="h-5 w-5" />
+            </div>
+            <span className="text-[10px] text-[#94A3B8] transition-colors group-hover:text-white">
+              Leave
+            </span>
+          </button>
         </div>
 
-        {/* More — Mobile overflow */}
         <div className="relative sm:hidden" ref={moreRef}>
           <button
-            onClick={() => setShowMore(!showMore)}
-            className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+            onClick={() => setShowMore((current) => !current)}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
             title="More"
           >
-            <Icon name="MoreHorizontal" className="w-5 h-5" />
+            <Icon name="MoreHorizontal" className="h-5 w-5" />
           </button>
-          {showMore && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 flex items-center gap-2 px-4 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-xl">
+          {showMore ? (
+            <div className="absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 items-center gap-2 rounded-2xl border border-white/10 bg-black/80 px-4 py-3 shadow-xl backdrop-blur-xl">
               <button
                 onClick={() => {
-                  setParticipantsOpen(!isParticipantsOpen);
+                  onParticipantsOpenChange(!participantsOpen);
                   setShowMore(false);
                 }}
                 className="flex flex-col items-center gap-1"
               >
-                <div className="relative flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
-                  <Icon name="Users" className="w-4 h-4" />
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] flex items-center justify-center rounded-full bg-[#0B5CFF] text-white text-[9px] font-bold px-1">
+                <div className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white">
+                  <Icon name="Users" className="h-4 w-4" />
+                  <span className="absolute -right-0.5 -top-0.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#0B5CFF] px-1 text-[9px] font-bold text-white">
                     {participantCount}
                   </span>
                 </div>
@@ -316,19 +245,13 @@ export default function ControlBar() {
               </button>
               <button
                 onClick={() => {
-                  if (settings.isChatAllowed) {
-                    setChatOpen(!isChatOpen);
-                  }
+                  onChatOpenChange(!chatOpen);
                   setShowMore(false);
                 }}
                 className="flex flex-col items-center gap-1"
-                disabled={!settings.isChatAllowed}
               >
-                <div className={cn(
-                  "flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full text-white",
-                  settings.isChatAllowed ? "bg-white/10" : "bg-white/5"
-                )}>
-                  <Icon name="MessageSquare" className="w-4 h-4" />
+                <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white">
+                  <Icon name="MessageSquare" className="h-4 w-4" />
                 </div>
                 <span className="text-[9px] text-[#94A3B8]">Chat</span>
               </button>
@@ -338,58 +261,27 @@ export default function ControlBar() {
                   setShowMore(false);
                 }}
                 className="flex flex-col items-center gap-1"
-                disabled={!settings.isScreenShareAllowed && !localParticipant.screenSharing}
               >
-                <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
-                  <Icon name="MonitorUp" className="w-4 h-4" />
+                <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white/10 text-white">
+                  <Icon name="MonitorUp" className="h-4 w-4" />
                 </div>
                 <span className="text-[9px] text-[#94A3B8]">Share</span>
               </button>
-              {localParticipant.isHost && (
-                <button
-                  onClick={() => {
-                    setHostSettingsOpen(true);
-                    setShowMore(false);
-                  }}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
-                    <Icon name="Shield" className="w-4 h-4" />
-                  </div>
-                  <span className="text-[9px] text-[#94A3B8]">Host</span>
-                </button>
-              )}
               <button
                 onClick={() => {
-                  toggleHand();
-                  setShowMore(false);
+                  onLeave();
+                  meeting.leave();
                 }}
                 className="flex flex-col items-center gap-1"
               >
-                <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-white/10 text-white">
-                  <Icon name="Hand" className="w-4 h-4" />
+                <div className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-red-500 text-white">
+                  <Icon name="PhoneOff" className="h-4 w-4" />
                 </div>
-                <span className="text-[9px] text-[#94A3B8]">Hand</span>
+                <span className="text-[9px] text-[#94A3B8]">Leave</span>
               </button>
             </div>
-          )}
+          ) : null}
         </div>
-
-        <div className="w-px h-8 bg-white/10 mx-1" />
-
-        {/* End Call */}
-        <button
-          onClick={handleLeave}
-          className="flex flex-col items-center justify-center gap-1 group touch-manipulation"
-          title="End Call"
-        >
-          <div className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors">
-            <Icon name="PhoneOff" className="w-5 h-5" />
-          </div>
-          <span className="hidden sm:block text-[10px] text-[#94A3B8] group-hover:text-white transition-colors">
-            Leave
-          </span>
-        </button>
       </div>
     </div>
   );

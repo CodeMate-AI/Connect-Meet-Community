@@ -18,6 +18,8 @@ import Icon from "@/components/Icon";
 interface ParticipantsPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  raisedHands?: Record<string, boolean>;
+  className?: string;
 }
 
 function getInitials(name: string): string {
@@ -34,6 +36,8 @@ function getInitials(name: string): string {
 export default function ParticipantsPanel({
   open,
   onOpenChange,
+  raisedHands = {},
+  className,
 }: ParticipantsPanelProps) {
   const localParticipant = useMeetingStore((s) => s.localParticipant);
   const remotePeers = useMeetingStore((s) => s.remotePeers);
@@ -63,7 +67,7 @@ export default function ParticipantsPanel({
         isHost: localParticipant.isHost,
         muted: localParticipant.muted,
         videoOff: localParticipant.videoOff,
-        handRaised: localParticipant.handRaised,
+        handRaised: raisedHands[localParticipant.id || "local"] ?? localParticipant.handRaised,
         isLocal: true,
       },
     ];
@@ -75,7 +79,7 @@ export default function ParticipantsPanel({
         isHost: false,
         muted: peer.state.muted,
         videoOff: peer.state.videoOff,
-        handRaised: peer.state.handRaised,
+        handRaised: raisedHands[peerId] ?? peer.state.handRaised,
         isLocal: false,
         connection: peer.connection,
       });
@@ -288,7 +292,8 @@ export default function ParticipantsPanel({
       <div
         className={cn(
           "fixed top-0 right-0 z-50 w-80 h-full bg-[#0F172A] border-l border-white/[0.08] shadow-2xl shadow-black/40 transition-transform duration-200 ease-in-out flex flex-col sm:flex hidden",
-          open ? "translate-x-0" : "translate-x-full"
+          open ? "translate-x-0" : "translate-x-full",
+          className
         )}
       >
         {/* Header */}
@@ -371,7 +376,7 @@ export default function ParticipantsPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full bg-[#0F172A] border-l border-white/[0.08] p-0 flex flex-col"
+        className={cn("w-full bg-[#0F172A] border-l border-white/[0.08] p-0 flex flex-col", className)}
         showCloseButton={false}
       >
         <SheetHeader className="px-5 py-4 border-b border-white/[0.08]">

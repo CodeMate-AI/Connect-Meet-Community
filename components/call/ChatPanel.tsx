@@ -1,19 +1,25 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
-import { useMeetingStore, type ChatMessage } from "@/lib/store";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMeeting, usePubSub } from "@videosdk.live/react-sdk";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
   SheetClose,
 } from "@/components/ui/sheet";
 import Icon from "@/components/Icon";
+
+type ChatPanelProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  className?: string;
+};
 
 function formatTime(timestamp: string): string {
   return new Date(timestamp).toLocaleTimeString("en-US", {
@@ -22,250 +28,131 @@ function formatTime(timestamp: string): string {
   });
 }
 
-export default function ChatPanel() {
-  const isChatOpen = useMeetingStore((s) => s.isChatOpen);
-  const setChatOpen = useMeetingStore((s) => s.setChatOpen);
-  const chatMessages = useMeetingStore((s) => s.chatMessages);
-  const localParticipant = useMeetingStore((s) => s.localParticipant);
-  const remotePeers = useMeetingStore((s) => s.remotePeers);
-  const settings = useMeetingStore((s) => s.settings);
-  const addChatMessage = useMeetingStore((s) => s.addChatMessage);
-
+export default function ChatPanel({ open, onOpenChange, className }: ChatPanelProps) {
+  const meeting = useMeeting();
+  const { publish, messages } = usePubSub("CHAT");
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
+  }, [messages]);
 
-  const sendChat = () => {
+  const localParticipantId = meeting.localParticipant?.id || "";
+  const isChatAllowed = true;
+
+  const sendChat = async () => {
     const text = draft.trim();
-    if (!text || !settings.isChatAllowed) return;
+    if (!text || !isChatAllowed) return;
 
-    const message: ChatMessage = {
-      id: `chat-${Math.random().toString(36).slice(2, 10)}`,
-      senderId: localParticipant.id || "local",
-      senderName: localParticipant.name || "Guest",
-      text,
-      timestamp: new Date().toISOString(),
-    };
-
-    addChatMessage(message);
-    Object.values(remotePeers).forEach((peer) => {
-      if (peer.dataChannel?.readyState === "open") {
-        peer.dataChannel.send(
-          JSON.stringify({ type: "chat", message })
-        );
-      }
-    });
+    await publish(text, { persist: true }, { kind: "chat" });
     setDraft("");
   };
 
-  const groupedMessages = useMemo(() => chatMessages, [chatMessages]);
+  const renderedMessages = useMemo(() => messages, [messages]);
 
-  const desktopMessages = (
-    <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-      {groupedMessages.length === 0 ? (
-        <div className="flex h-full items-center justify-center text-center px-4">
-          <div>
-            <Icon name="MessageSquare" className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-            <p className="text-sm text-[#94A3B8]">No messages yet</p>
-          </div>
+  const content = (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F172A]/95 shadow-2xl shadow-black/25">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+        <div className="flex items-center gap-2">
+          <h2 className="font-heading text-base font-semibold text-[#E2E8F0]">Chat</h2>
+          <span className="inline-flex min-w-[22px] items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
+            {messages.length}
+          </span>
         </div>
-      ) : (
-        groupedMessages.map((message) => {
-          const isSelf = message.senderId === localParticipant.id;
-          return (
-            <div
-              key={message.id}
-              className={cn(
-                "flex",
-                isSelf ? "justify-end" : "justify-start"
-              )}
-            >
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-2xl px-3 py-2 shadow-sm border",
-                  isSelf
-                    ? "bg-[#0B5CFF] text-white border-[#0B5CFF]/20 rounded-br-md"
-                    : "bg-[#1E293B] text-[#E2E8F0] border-white/[0.08] rounded-bl-md"
-                )}
-              >
-                <div className="flex items-center justify-between gap-3 mb-1">
-                  <span className="text-xs font-semibold opacity-90">
-                    {isSelf ? "You" : message.senderName}
-                  </span>
-                  <span className="text-[10px] opacity-70">{formatTime(message.timestamp)}</span>
-                </div>
-                <p className="text-sm leading-relaxed break-words">{message.text}</p>
-              </div>
-            </div>
-          );
-        })
-      )}
-      <div ref={bottomRef} />
-    </div>
-  );
+        <button
+          onClick={() => onOpenChange(false)}
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[#94A3B8] transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <Icon name="X" className="h-5 w-5" />
+        </button>
+      </div>
 
-  const DesktopPanel = (
-    <>
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 sm:block hidden",
-          isChatOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        )}
-        onClick={() => setChatOpen(false)}
-      />
-      <div
-        className={cn(
-          "fixed top-0 right-0 z-50 w-96 h-full bg-[#0F172A] border-l border-white/[0.08] shadow-2xl shadow-black/40 transition-transform duration-200 ease-in-out flex flex-col sm:flex hidden",
-          isChatOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
-          <div className="flex items-center gap-2">
-            <h2 className="font-heading text-base font-semibold text-[#E2E8F0]">
-              Chat
-            </h2>
-            <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-md bg-[#0B5CFF]/15 text-[#0B5CFF] text-xs font-bold">
-              {chatMessages.length}
-            </span>
-          </div>
-          <button
-            onClick={() => setChatOpen(false)}
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors text-[#94A3B8] hover:text-white"
-          >
-            <Icon name="X" className="w-5 h-5" />
-          </button>
-        </div>
-
-        {!settings.isChatAllowed ? (
-          <div className="flex-1 flex items-center justify-center px-6 text-center">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {renderedMessages.length === 0 ? (
+          <div className="flex h-full min-h-[12rem] items-center justify-center text-center px-4">
             <div>
-              <Icon name="MessageSquareOff" className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-              <p className="text-sm text-[#94A3B8]">Chat is disabled by the host.</p>
+              <Icon name="MessageSquare" className="mx-auto mb-2 h-8 w-8 text-[#64748B]" />
+              <p className="text-sm text-[#94A3B8]">No messages yet</p>
             </div>
           </div>
         ) : (
-          desktopMessages
+          renderedMessages.map((message) => {
+            const isSelf = message.senderId === localParticipantId;
+            return (
+              <div key={message.id} className={cn("flex", isSelf ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[85%] rounded-2xl border px-3 py-2 shadow-sm",
+                    isSelf
+                      ? "rounded-br-md border-[#0B5CFF]/20 bg-[#0B5CFF] text-white"
+                      : "rounded-bl-md border-white/[0.08] bg-[#1E293B] text-[#E2E8F0]"
+                  )}
+                >
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold opacity-90">
+                      {isSelf ? "You" : message.senderName}
+                    </span>
+                    <span className="text-[10px] opacity-70">{formatTime(message.timestamp)}</span>
+                  </div>
+                  <p className="break-words text-sm leading-relaxed">{message.message}</p>
+                </div>
+              </div>
+            );
+          })
         )}
-
-        <SheetFooter className="px-4 py-3 border-t border-white/[0.06] bg-[#0B1120]">
-          <div className="flex items-center gap-2 w-full">
-            <Input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendChat()}
-              placeholder={settings.isChatAllowed ? "Send a message..." : "Chat disabled"}
-              disabled={!settings.isChatAllowed}
-              className="bg-[#1E293B] border-white/[0.08] text-[#E2E8F0] placeholder:text-[#64748B]"
-            />
-            <Button onClick={sendChat} disabled={!draft.trim() || !settings.isChatAllowed} className="bg-[#0B5CFF]">
-              Send
-            </Button>
-          </div>
-        </SheetFooter>
+        <div ref={bottomRef} />
       </div>
-    </>
+
+      <SheetFooter className="border-t border-white/[0.06] bg-[#0B1120] px-4 py-3">
+        <div className="flex w-full items-center gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void sendChat()}
+            placeholder="Send a message..."
+            className="border-white/[0.08] bg-[#1E293B] text-[#E2E8F0] placeholder:text-[#64748B]"
+          />
+          <Button onClick={() => void sendChat()} disabled={!draft.trim()} className="bg-[#0B5CFF]">
+            Send
+          </Button>
+        </div>
+      </SheetFooter>
+    </div>
   );
 
-  const MobilePanel = (
-    <Sheet open={isChatOpen} onOpenChange={setChatOpen}>
+  const mobilePanel = (
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full bg-[#0F172A] border-l border-white/[0.08] p-0 flex flex-col"
+        className="flex h-full w-full flex-col border-l border-white/[0.08] bg-[#0F172A] p-0"
         showCloseButton={false}
       >
-        <SheetHeader className="px-5 py-4 border-b border-white/[0.08]">
-          <div className="flex items-center justify-between w-full">
+        <SheetHeader className="border-b border-white/[0.08] px-5 py-4">
+          <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
               <SheetTitle className="text-[#E2E8F0]">Chat</SheetTitle>
-              <span className="inline-flex items-center justify-center min-w-[22px] h-5 px-1.5 rounded-md bg-[#0B5CFF]/15 text-[#0B5CFF] text-xs font-bold">
-                {chatMessages.length}
+              <span className="inline-flex min-w-[22px] items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
+                {messages.length}
               </span>
             </div>
             <SheetClose asChild>
-              <button className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors text-[#94A3B8] hover:text-white">
-                <Icon name="X" className="w-5 h-5" />
+              <button className="flex h-8 w-8 items-center justify-center rounded-full text-[#94A3B8] transition-colors hover:bg-white/10 hover:text-white">
+                <Icon name="X" className="h-5 w-5" />
               </button>
             </SheetClose>
           </div>
         </SheetHeader>
 
-        {!settings.isChatAllowed ? (
-          <div className="flex-1 flex items-center justify-center px-6 text-center">
-            <div>
-              <Icon name="MessageSquareOff" className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-              <p className="text-sm text-[#94A3B8]">Chat is disabled by the host.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-            {groupedMessages.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-center px-4">
-                <div>
-                  <Icon name="MessageSquare" className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-                  <p className="text-sm text-[#94A3B8]">No messages yet</p>
-                </div>
-              </div>
-            ) : (
-              groupedMessages.map((message) => {
-                const isSelf = message.senderId === localParticipant.id;
-                return (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex",
-                      isSelf ? "justify-end" : "justify-start"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "max-w-[85%] rounded-2xl px-3 py-2 shadow-sm border",
-                        isSelf
-                          ? "bg-[#0B5CFF] text-white border-[#0B5CFF]/20 rounded-br-md"
-                          : "bg-[#1E293B] text-[#E2E8F0] border-white/[0.08] rounded-bl-md"
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-1">
-                        <span className="text-xs font-semibold opacity-90">
-                          {isSelf ? "You" : message.senderName}
-                        </span>
-                        <span className="text-[10px] opacity-70">{formatTime(message.timestamp)}</span>
-                      </div>
-                      <p className="text-sm leading-relaxed break-words">{message.text}</p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div ref={bottomRef} />
-          </div>
-        )}
-
-        <SheetFooter className="px-4 py-3 border-t border-white/[0.06] bg-[#0B1120]">
-          <div className="flex items-center gap-2 w-full">
-            <Input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendChat()}
-              placeholder={settings.isChatAllowed ? "Send a message..." : "Chat disabled"}
-              disabled={!settings.isChatAllowed}
-              className="bg-[#1E293B] border-white/[0.08] text-[#E2E8F0] placeholder:text-[#64748B]"
-            />
-            <Button onClick={sendChat} disabled={!draft.trim() || !settings.isChatAllowed} className="bg-[#0B5CFF]">
-              Send
-            </Button>
-          </div>
-        </SheetFooter>
+        <div className="flex-1 min-h-0">{content}</div>
       </SheetContent>
     </Sheet>
   );
 
   return (
-    <>
-      <div className="hidden sm:block">{DesktopPanel}</div>
-      <div className="sm:hidden">{MobilePanel}</div>
-    </>
+    <div className={cn("min-h-0", className)}>
+      <div className="hidden h-full min-h-0 xl:block">{content}</div>
+      <div className="xl:hidden">{mobilePanel}</div>
+    </div>
   );
 }
