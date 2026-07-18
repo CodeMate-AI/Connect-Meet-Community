@@ -14,11 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import {
-  addMeeting,
-  generateMeetingId,
-  generateMeetingLink,
-} from "@/lib/meetings";
+import { addMeeting, generateMeetingId, generateMeetingLink } from "@/lib/meetings";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
 
@@ -38,11 +34,32 @@ export default function QuickActions() {
   const [scheduleTime, setScheduleTime] = useState("");
   const [generatedId, setGeneratedId] = useState("");
   const [copied, setCopied] = useState(false);
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
 
-  const handleNewMeeting = () => {
-    const id = generateMeetingId();
-    setGeneratedId(id);
-    setNewMeetingOpen(true);
+  const handleNewMeeting = async () => {
+    if (creatingMeeting) return;
+
+    setCreatingMeeting(true);
+    try {
+      const response = await fetch("/api/videosdk/room", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const payload = (await response.json()) as { roomId?: string; error?: string };
+      if (!response.ok || !payload.roomId) {
+        throw new Error(payload.error || "Unable to create a meeting room");
+      }
+
+      setGeneratedId(payload.roomId);
+      setNewMeetingOpen(true);
+    } catch (error) {
+      console.error("Failed to create VideoSDK room:", error);
+    } finally {
+      setCreatingMeeting(false);
+    }
   };
 
   const handleStartNow = () => {
@@ -86,8 +103,10 @@ export default function QuickActions() {
 
   const actions = [
     {
-      label: "New Meeting",
-      description: "Start an instant meeting",
+      label: creatingMeeting ? "Creating..." : "New Meeting",
+      description: creatingMeeting
+        ? "Provisioning a global room"
+        : "Start an instant meeting",
       icon: "Video",
       variant: "primary" as const,
       onClick: handleNewMeeting,
@@ -115,9 +134,10 @@ export default function QuickActions() {
           <button
             key={action.label}
             onClick={action.onClick}
+            disabled={creatingMeeting && action.label === "Creating..."}
             className={
               action.variant === "primary"
-                ? "flex flex-col items-start gap-3 p-5 rounded-xl bg-[#0B5CFF] text-white shadow-sm hover:bg-[#0B5CFF]/90 transition-colors text-left"
+                ? "flex flex-col items-start gap-3 p-5 rounded-xl bg-[#0B5CFF] text-white shadow-sm hover:bg-[#0B5CFF]/90 transition-colors text-left disabled:opacity-70 disabled:cursor-wait"
                 : "flex flex-col items-start gap-3 p-5 rounded-xl bg-white border border-[#E2E8F0] text-[#0F172A] shadow-sm hover:border-[#0B5CFF]/30 hover:shadow-md transition-all text-left"
             }
           >
@@ -156,7 +176,14 @@ export default function QuickActions() {
       </div>
 
       {/* New Meeting Dialog */}
-      <Dialog open={newMeetingOpen} onOpenChange={setNewMeetingOpen}>
+      <Dialog
+        open={newMeetingOpen}
+        onOpenChange={(open) => {
+          if (!creatingMeeting) {
+            setNewMeetingOpen(open);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>New Meeting</DialogTitle>
@@ -169,13 +196,14 @@ export default function QuickActions() {
               <div className="text-xs text-[#64748B] mb-1">Meeting Link</div>
               <div className="flex items-center gap-2 min-w-0">
                 <code className="flex-1 text-sm text-[#0F172A] truncate min-w-0">
-                  {generateMeetingLink(generatedId)}
+                  {generatedId ? generateMeetingLink(generatedId) : "Creating meeting link..."}
                 </code>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopyLink}
                   className="shrink-0"
+                  disabled={!generatedId}
                 >
                   <Icon name={copied ? "Check" : "Copy"} className="w-4 h-4 mr-1.5" />
                   {copied ? "Copied" : "Copy"}
@@ -184,14 +212,20 @@ export default function QuickActions() {
             </div>
             <div className="p-3 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]">
               <div className="text-xs text-[#64748B] mb-1">Meeting ID</div>
-              <code className="text-sm font-mono text-[#0F172A]">{generatedId}</code>
+              <code className="text-sm font-mono text-[#0F172A]">
+                {generatedId || "Pending..."}
+              </code>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewMeetingOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setNewMeetingOpen(false)}
+              disabled={creatingMeeting}
+            >
               Close
             </Button>
-            <Button onClick={handleStartNow} className="bg-[#0B5CFF]">
+            <Button onClick={handleStartNow} className="bg-[#0B5CFF]" disabled={!generatedId}>
               <Icon name="Play" className="w-4 h-4 mr-1.5" />
               Start Now
             </Button>
