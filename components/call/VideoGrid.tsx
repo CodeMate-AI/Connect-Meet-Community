@@ -14,20 +14,26 @@ export default function VideoGrid({
   reactions = {},
 }: VideoGridProps) {
   const meeting = useMeeting();
-  const participants = useMemo(
-    () => Array.from(meeting.participants.values()),
-    [meeting.participants]
-  );
+  const allParticipants = useMemo(() => {
+    const list = Array.from(meeting.participants.values());
+    if (meeting.localParticipant) {
+      const exists = list.some((p) => p.id === meeting.localParticipant.id);
+      if (!exists) {
+        list.unshift(meeting.localParticipant);
+      }
+    }
+    return list;
+  }, [meeting.participants, meeting.localParticipant]);
   const presenterId = meeting.presenterId || meeting.activeSpeakerId || null;
   const localParticipantId = meeting.localParticipant?.id || "";
 
   const screenSharers = useMemo(
     () =>
-      participants.filter((participant) => {
+      allParticipants.filter((participant) => {
         const meta = participant.metaData as { isScreenSharing?: boolean } | undefined;
         return Boolean(meta?.isScreenSharing || participant.screenShareOn);
       }),
-    [participants]
+    [allParticipants]
   );
 
   const focusedParticipantId =
@@ -38,7 +44,7 @@ export default function VideoGrid({
 
   if (screenSharers.length > 0) {
     const primary = screenSharers[0];
-    const others = participants.filter((participant) => participant.id !== primary.id);
+    const others = allParticipants.filter((participant) => participant.id !== primary.id);
 
     return (
       <div className="flex h-full min-h-0 flex-col gap-3">
@@ -69,12 +75,12 @@ export default function VideoGrid({
     );
   }
 
-  if (participants.length === 0) {
+  if (allParticipants.length === 0) {
     return null;
   }
 
-  if (participants.length === 1) {
-    const participant = participants[0];
+  if (allParticipants.length === 1) {
+    const participant = allParticipants[0];
     return (
       <div className="flex h-full min-h-0">
         <VideoTile
@@ -88,11 +94,11 @@ export default function VideoGrid({
     );
   }
 
-  const galleryLayout = participants.length <= 4 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
+  const galleryLayout = allParticipants.length <= 4 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
 
   return (
     <div className={`grid h-full min-h-0 gap-3 ${galleryLayout}`}>
-      {participants.map((participant) => (
+      {allParticipants.map((participant) => (
         <VideoTile
           key={participant.id}
           participantId={participant.id}

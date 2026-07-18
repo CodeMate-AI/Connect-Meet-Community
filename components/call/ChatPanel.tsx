@@ -49,7 +49,14 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
     setDraft("");
   };
 
-  const renderedMessages = useMemo(() => messages, [messages]);
+  const renderedMessages = useMemo(() => {
+    const seen = new Set<string>();
+    return messages.filter((message) => {
+      if (seen.has(message.id)) return false;
+      seen.add(message.id);
+      return true;
+    });
+  }, [messages]);
 
   const content = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#0F172A]/95 shadow-2xl shadow-black/25">

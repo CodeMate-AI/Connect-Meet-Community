@@ -11,10 +11,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { addMeeting, generateMeetingId, generateMeetingLink } from "@/lib/meetings";
+import { addMeeting, createVideoSDKRoom, generateMeetingLink } from "@/lib/meetings";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
 
@@ -35,25 +34,15 @@ export default function QuickActions() {
   const [generatedId, setGeneratedId] = useState("");
   const [copied, setCopied] = useState(false);
   const [creatingMeeting, setCreatingMeeting] = useState(false);
+  const [schedulingMeeting, setSchedulingMeeting] = useState(false);
 
   const handleNewMeeting = async () => {
     if (creatingMeeting) return;
 
     setCreatingMeeting(true);
     try {
-      const response = await fetch("/api/videosdk/room", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const payload = (await response.json()) as { roomId?: string; error?: string };
-      if (!response.ok || !payload.roomId) {
-        throw new Error(payload.error || "Unable to create a meeting room");
-      }
-
-      setGeneratedId(payload.roomId);
+      const roomId = await createVideoSDKRoom();
+      setGeneratedId(roomId);
       setNewMeetingOpen(true);
     } catch (error) {
       console.error("Failed to create VideoSDK room:", error);
@@ -78,9 +67,12 @@ export default function QuickActions() {
     }
   };
 
-  const handleSchedule = () => {
-    if (scheduleTitle && scheduleDate && scheduleTime) {
-      const id = generateMeetingId();
+  const handleSchedule = async () => {
+    if (!scheduleTitle || !scheduleDate || !scheduleTime || schedulingMeeting) return;
+
+    setSchedulingMeeting(true);
+    try {
+      const id = await createVideoSDKRoom();
       const dateObj = new Date(`${scheduleDate}T${scheduleTime}`);
       const displayName = getDisplayName();
       addMeeting({
@@ -98,6 +90,10 @@ export default function QuickActions() {
       setScheduleDate("");
       setScheduleTime("");
       window.location.reload();
+    } catch (error) {
+      console.error("Failed to schedule meeting:", error);
+    } finally {
+      setSchedulingMeeting(false);
     }
   };
 
@@ -119,8 +115,8 @@ export default function QuickActions() {
       onClick: () => setJoinMeetingOpen(true),
     },
     {
-      label: "Schedule",
-      description: "Plan a future meeting",
+      label: schedulingMeeting ? "Scheduling..." : "Schedule",
+      description: schedulingMeeting ? "Creating a VideoSDK room" : "Plan a future meeting",
       icon: "Calendar",
       variant: "secondary" as const,
       onClick: () => setScheduleOpen(true),
@@ -134,11 +130,11 @@ export default function QuickActions() {
           <button
             key={action.label}
             onClick={action.onClick}
-            disabled={creatingMeeting && action.label === "Creating..."}
+            disabled={creatingMeeting || schedulingMeeting}
             className={
               action.variant === "primary"
                 ? "flex flex-col items-start gap-3 p-5 rounded-xl bg-[#0B5CFF] text-white shadow-sm hover:bg-[#0B5CFF]/90 transition-colors text-left disabled:opacity-70 disabled:cursor-wait"
-                : "flex flex-col items-start gap-3 p-5 rounded-xl bg-white border border-[#E2E8F0] text-[#0F172A] shadow-sm hover:border-[#0B5CFF]/30 hover:shadow-md transition-all text-left"
+                : "flex flex-col items-start gap-3 p-5 rounded-xl bg-white border border-[#E2E8F0] text-[#0F172A] shadow-sm hover:border-[#0B5CFF]/30 hover:shadow-md transition-all text-left disabled:opacity-70 disabled:cursor-wait"
             }
           >
             <div
@@ -264,16 +260,15 @@ export default function QuickActions() {
 
       {/* Schedule Meeting Dialog */}
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Schedule Meeting</DialogTitle>
             <DialogDescription>
-              Set up a meeting for later.
+              Create a future meeting room and share its link.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 py-2">
+          <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-medium text-[#64748B] mb-1 block">Title</label>
               <Input
                 placeholder="Meeting title"
                 value={scheduleTitle}
@@ -281,35 +276,25 @@ export default function QuickActions() {
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-[#64748B] mb-1 block">Date</label>
-                <Input
-                  type="date"
-                  value={scheduleDate}
-                  onChange={(e) => setScheduleDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-[#64748B] mb-1 block">Time</label>
-                <Input
-                  type="time"
-                  value={scheduleTime}
-                  onChange={(e) => setScheduleTime(e.target.value)}
-                />
-              </div>
+              <Input
+                type="date"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+              />
+              <Input
+                type="time"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setScheduleOpen(false)}>
+            <Button variant="outline" onClick={() => setScheduleOpen(false)} disabled={schedulingMeeting}>
               Cancel
             </Button>
-            <Button
-              onClick={handleSchedule}
-              className="bg-[#0B5CFF]"
-              disabled={!scheduleTitle || !scheduleDate || !scheduleTime}
-            >
+            <Button onClick={handleSchedule} className="bg-[#0B5CFF]" disabled={schedulingMeeting || !scheduleTitle || !scheduleDate || !scheduleTime}>
               <Icon name="Calendar" className="w-4 h-4 mr-1.5" />
-              Schedule
+              {schedulingMeeting ? "Scheduling..." : "Schedule"}
             </Button>
           </DialogFooter>
         </DialogContent>

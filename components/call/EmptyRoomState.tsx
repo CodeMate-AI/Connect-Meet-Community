@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Icon from "@/components/Icon";
+import { generateMeetingLink } from "@/lib/meetings";
 
 interface EmptyRoomStateProps {
   meetingId: string;
@@ -10,7 +11,7 @@ interface EmptyRoomStateProps {
 export default function EmptyRoomState({ meetingId }: EmptyRoomStateProps) {
   const [copied, setCopied] = useState(false);
 
-  const link = `https://connectmeet.app/meeting/${meetingId}`;
+  const link = generateMeetingLink(meetingId);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(link);

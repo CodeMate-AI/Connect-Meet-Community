@@ -54,10 +54,28 @@ export function formatMeetingDate(dateStr: string): { day: string; month: string
   };
 }
 
-export function generateMeetingId(): string {
-  return `cm-${Math.random().toString(36).substring(2, 10)}`;
+async function parseRoomCreationResponse(response: Response): Promise<string> {
+  const payload = (await response.json()) as { roomId?: string; error?: string };
+  if (!response.ok || !payload.roomId) {
+    throw new Error(payload.error || "Unable to create a meeting room");
+  }
+  return payload.roomId;
+}
+
+export async function createVideoSDKRoom(): Promise<string> {
+  const response = await fetch("/api/videosdk/room", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  return parseRoomCreationResponse(response);
 }
 
 export function generateMeetingLink(id: string): string {
-  return `https://connectmeet.app/meeting/${id}`;
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/meeting/${id}/lobby`;
+  }
+  return `/meeting/${id}/lobby`;
 }

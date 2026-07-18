@@ -15,6 +15,7 @@ type ControlBarProps = {
   chatOpen: boolean;
   onChatOpenChange: (open: boolean) => void;
   localParticipantId: string;
+  isJoined: boolean;
 };
 
 export default function ControlBar({
@@ -24,9 +25,10 @@ export default function ControlBar({
   chatOpen,
   onChatOpenChange,
   localParticipantId,
+  isJoined,
 }: ControlBarProps) {
   const meeting = useMeeting();
-  const { publish: publishRaiseHand } = usePubSub("RAISE_HAND");
+  const { publish: publishRaiseHand, messages: raisedHandMessages } = usePubSub("RAISE_HAND");
   const { publish: publishReactions } = usePubSub("REACTIONS");
 
   const [showReactions, setShowReactions] = useState(false);
@@ -48,40 +50,67 @@ export default function ControlBar({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const participantCount = useMemo(() => meeting.participants.size, [meeting.participants]);
+  const participantCount = useMemo(() => {
+    const localParticipantIncluded = meeting.localParticipant
+      ? meeting.participants.has(meeting.localParticipant.id)
+      : false;
+
+    return meeting.participants.size + (meeting.localParticipant && !localParticipantIncluded ? 1 : 0);
+  }, [meeting.localParticipant, meeting.participants]);
+
+  const isHandRaised = useMemo(() => {
+    for (let index = raisedHandMessages.length - 1; index >= 0; index -= 1) {
+      const message = raisedHandMessages[index];
+      if (message.senderId !== localParticipantId) continue;
+
+      const payload = message.payload as { raised?: boolean } | undefined;
+      if (typeof payload?.raised === "boolean") {
+        return payload.raised;
+      }
+
+      return message.message === "raise";
+    }
+
+    return false;
+  }, [localParticipantId, raisedHandMessages]);
 
   const toggleMic = useCallback(() => {
+    if (!isJoined) return;
     meeting.localMicOn ? meeting.muteMic() : meeting.unmuteMic();
-  }, [meeting]);
+  }, [meeting, isJoined]);
 
   const toggleCamera = useCallback(() => {
+    if (!isJoined) return;
     meeting.localWebcamOn ? meeting.disableWebcam() : meeting.enableWebcam();
-  }, [meeting]);
+  }, [meeting, isJoined]);
 
   const toggleScreenShare = useCallback(() => {
+    if (!isJoined) return;
     meeting.localScreenShareOn
       ? meeting.disableScreenShare()
       : meeting.enableScreenShare();
-  }, [meeting]);
+  }, [meeting, isJoined]);
 
   const toggleHand = useCallback(() => {
-    const raised = !meeting.participants.has(localParticipantId)
-      ? false
-      : true;
-    void publishRaiseHand(raised ? "raise" : "lower", {
-      persist: true,
-    }, { raised, participantId: localParticipantId });
-  }, [localParticipantId, meeting.participants, publishRaiseHand]);
+    if (!isJoined) return;
+    const nextRaised = !isHandRaised;
+    void publishRaiseHand(
+      nextRaised ? "raise" : "lower",
+      { persist: true },
+      { raised: nextRaised, participantId: localParticipantId }
+    );
+  }, [isHandRaised, localParticipantId, publishRaiseHand, isJoined]);
 
   const sendReaction = useCallback(
     (emoji: string) => {
+      if (!isJoined) return;
       setShowReactions(false);
       void publishReactions(emoji, { persist: false }, {
         emoji,
         expiresAt: Date.now() + 2200,
       });
     },
-    [publishReactions]
+    [publishReactions, isJoined]
   );
 
   const avBtn = (
@@ -180,16 +209,30 @@ export default function ControlBar({
               </span>
             </button>
             {showReactions ? (
-              <div className="absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 items-center gap-1 rounded-full border border-white/10 bg-black/80 px-3 py-2 shadow-xl backdrop-blur-xl">
-                {REACTIONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => sendReaction(emoji)}
-                    className="flex min-h-[44px] min-w-[44px] items-center justify-center select-none text-xl transition-transform hover:scale-125"
-                  >
-                    {emoji}
-                  </button>
-                ))}
+              <div className="absolute bottom-full left-1/2 mb-2 flex -translate-x-1/2 flex-col gap-2 rounded-2xl border border-white/10 bg-black/80 px-3 py-3 shadow-xl backdrop-blur-xl">
+                <button
+                  onClick={toggleHand}
+                  className={cn(
+                    "flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                    isHandRaised
+                      ? "bg-[#FEBD00]/15 text-[#FEBD00] hover:bg-[#FEBD00]/20"
+                      : "bg-white/10 text-white hover:bg-white/20"
+                  )}
+                >
+                  <Icon name="Hand" className="h-4 w-4" />
+                  {isHandRaised ? "Lower Hand" : "Raise Hand"}
+                </button>
+                <div className="flex items-center gap-1 border-t border-white/10 pt-2">
+                  {REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => sendReaction(emoji)}
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center select-none text-xl transition-transform hover:scale-125"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>

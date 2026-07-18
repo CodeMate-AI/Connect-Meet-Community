@@ -18,11 +18,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
-import {
-  addMeeting,
-  generateMeetingId,
-  generateMeetingLink,
-} from "@/lib/meetings";
+import { addMeeting, createVideoSDKRoom, generateMeetingLink } from "@/lib/meetings";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
 
@@ -58,6 +54,7 @@ export default function MeetingModal({
   const [newScheduleTime, setNewScheduleTime] = useState("");
   const [newErrors, setNewErrors] = useState<Record<string, string>>({});
   const [newCopied, setNewCopied] = useState(false);
+  const [creatingNewRoom, setCreatingNewRoom] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -71,18 +68,38 @@ export default function MeetingModal({
       setNewScheduleTime("");
       setNewErrors({});
       setNewCopied(false);
-
-      if (defaultTab === "new") {
-        setNewId(generateMeetingId());
-      }
+      setNewId("");
+      setCreatingNewRoom(false);
     }
   }, [open, defaultTab]);
 
   useEffect(() => {
-    if (activeTab === "new" && !newId) {
-      setNewId(generateMeetingId());
-    }
-  }, [activeTab, newId]);
+    let cancelled = false;
+
+    const prepareRoom = async () => {
+      if (activeTab !== "new" || newId || creatingNewRoom) return;
+
+      setCreatingNewRoom(true);
+      try {
+        const roomId = await createVideoSDKRoom();
+        if (!cancelled) {
+          setNewId(roomId);
+        }
+      } catch (error) {
+        console.error("Failed to create VideoSDK room:", error);
+      } finally {
+        if (!cancelled) {
+          setCreatingNewRoom(false);
+        }
+      }
+    };
+
+    void prepareRoom();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, newId, creatingNewRoom]);
 
   const validateJoin = useCallback(() => {
     const errors: Record<string, string> = {};
@@ -111,9 +128,12 @@ export default function MeetingModal({
         errors.schedule = "Please select both date and time.";
       }
     }
+    if (!newId) {
+      errors.id = "Meeting room is still being created.";
+    }
     setNewErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [newTitle, newScheduleDate, newScheduleTime]);
+  }, [newTitle, newScheduleDate, newScheduleTime, newId]);
 
   const handleJoin = () => {
     if (!validateJoin()) return;
@@ -337,17 +357,20 @@ export default function MeetingModal({
 
             <div className="p-3 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0]">
               <div className="text-xs text-[#64748B] mb-1">Meeting ID</div>
-              <code className="text-sm font-mono text-[#0F172A]">{newId}</code>
+              <code className="text-sm font-mono text-[#0F172A]">
+                {newId || (creatingNewRoom ? "Creating room..." : "Pending...")}
+              </code>
               <div className="text-xs text-[#64748B] mt-2 mb-1">Shareable Link</div>
               <div className="flex items-center gap-2 min-w-0">
                 <code className="flex-1 text-sm text-[#0F172A] truncate min-w-0">
-                  {generateMeetingLink(newId)}
+                  {newId ? generateMeetingLink(newId) : "Creating meeting link..."}
                 </code>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopyLink}
                   className="shrink-0"
+                  disabled={!newId}
                 >
                   <Icon
                     name={newCopied ? "Check" : "Copy"}
@@ -365,6 +388,7 @@ export default function MeetingModal({
               <Button
                 onClick={handleCreate}
                 className="bg-[#0B5CFF] hover:bg-[#0B5CFF]/90 text-white"
+                disabled={creatingNewRoom || !newId}
               >
                 <Icon name="Video" className="w-4 h-4 mr-1.5" />
                 Create Meeting
