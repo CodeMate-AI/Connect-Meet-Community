@@ -94,21 +94,25 @@ export default function ControlBar({
   const toggleHand = useCallback(() => {
     if (!isJoined) return;
     const nextRaised = !isHandRaised;
-    void publishRaiseHand(
-      nextRaised ? "raise" : "lower",
-      { persist: true },
-      { raised: nextRaised, participantId: localParticipantId }
-    );
+    const options: any = {
+      persist: true,
+      payload: { raised: nextRaised, participantId: localParticipantId },
+    };
+    void publishRaiseHand(nextRaised ? "raise" : "lower", options);
   }, [isHandRaised, localParticipantId, publishRaiseHand, isJoined]);
 
   const sendReaction = useCallback(
     (emoji: string) => {
       if (!isJoined) return;
       setShowReactions(false);
-      void publishReactions(emoji, { persist: false }, {
-        emoji,
-        expiresAt: Date.now() + 2200,
-      });
+      const options: any = {
+        persist: false,
+        payload: {
+          emoji,
+          expiresAt: Date.now() + 2200,
+        },
+      };
+      void publishReactions(emoji, options);
     },
     [publishReactions, isJoined]
   );
@@ -245,10 +249,7 @@ export default function ControlBar({
           )}
 
           <button
-            onClick={() => {
-              onLeave();
-              meeting.leave();
-            }}
+            onClick={onLeave}
             className="group flex flex-col items-center justify-center gap-1 touch-manipulation"
             title="Leave meeting"
           >

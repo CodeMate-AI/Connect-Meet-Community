@@ -72,43 +72,15 @@ function buildReactions(
   return next;
 }
 
-function MeetingRoomContent() {
-  const [isJoined, setIsJoined] = useState(false);
-
-  const meeting = useMeeting({
-    onMeetingJoined: () => {
-      setIsJoined(true);
-    },
-    onMeetingLeft: () => {
-      setIsJoined(false);
-    },
-  });
-
-  const { join, leave } = meeting;
-  const joinAttempted = useRef(false);
-
-  const joinRef = useRef(join);
-  const leaveRef = useRef(leave);
-  const isJoinedRef = useRef(isJoined);
-
-  useEffect(() => {
-    joinRef.current = join;
-    leaveRef.current = leave;
-    isJoinedRef.current = isJoined;
-  });
-
-  useEffect(() => {
-    if (!joinAttempted.current) {
-      joinRef.current();
-      joinAttempted.current = true;
-    }
-    return () => {
-      if (isJoinedRef.current) {
-        leaveRef.current();
-      }
-    };
-  }, []);
-
+function ActiveMeetingRoom({
+  meeting,
+  isJoined,
+  onLeave,
+}: {
+  meeting: ReturnType<typeof useMeeting>;
+  isJoined: boolean;
+  onLeave: () => void;
+}) {
   const [clock, setClock] = useState(() => Date.now());
   const [participantsOpen, setParticipantsOpen] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
@@ -120,12 +92,10 @@ function MeetingRoomContent() {
 
   const localParticipantId = meeting.localParticipant?.id || "";
 
-  // Unique remote participants count (excluding local participant if it is in the map)
   const remoteCount = useMemo(() => {
     return participantIds.filter((id) => id !== localParticipantId).length;
   }, [participantIds, localParticipantId]);
 
-  // Unique total participants count
   const totalParticipantCount = useMemo(() => {
     const set = new Set(participantIds);
     if (localParticipantId) {
@@ -154,11 +124,6 @@ function MeetingRoomContent() {
     () => buildReactions(reactionMessages, participantIds, clock),
     [clock, participantIds, reactionMessages]
   );
-
-  const handleLeave = useCallback(() => {
-    meeting.leave();
-    window.location.assign("/");
-  }, [meeting]);
 
   const sidebar = showSidebar ? (
     <div className="hidden xl:flex min-h-0 flex-col gap-4">
@@ -223,7 +188,7 @@ function MeetingRoomContent() {
       </div>
 
       <ControlBar
-        onLeave={handleLeave}
+        onLeave={onLeave}
         participantsOpen={participantsOpen}
         onParticipantsOpenChange={setParticipantsOpen}
         chatOpen={chatOpen}
@@ -233,6 +198,69 @@ function MeetingRoomContent() {
       />
     </div>
   );
+}
+
+function MeetingRoomContent() {
+  const [isJoined, setIsJoined] = useState(false);
+
+  const meeting = useMeeting({
+    onMeetingJoined: () => {
+      setTimeout(() => {
+        setIsJoined(true);
+      }, 500);
+    },
+    onMeetingLeft: () => {
+      setIsJoined(false);
+    },
+  });
+
+  const { join, leave } = meeting;
+  const joinAttempted = useRef(false);
+
+  const joinRef = useRef(join);
+  const leaveRef = useRef(leave);
+  const isJoinedRef = useRef(isJoined);
+
+  useEffect(() => {
+    joinRef.current = join;
+    leaveRef.current = leave;
+    isJoinedRef.current = isJoined;
+  });
+
+  useEffect(() => {
+    if (!joinAttempted.current) {
+      joinRef.current();
+      joinAttempted.current = true;
+    }
+    return () => {
+      if (isJoinedRef.current) {
+        leaveRef.current();
+      }
+    };
+  }, []);
+
+  const handleLeave = useCallback(() => {
+    meeting.leave();
+    window.location.assign("/");
+  }, [meeting]);
+
+  if (!isJoined) {
+    return (
+      <div className="dark flex min-h-screen items-center justify-center bg-[#0B1120] px-6 text-center text-[#E2E8F0]">
+        <div className="max-w-sm space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-[#0B5CFF]" />
+          </div>
+          <h1 className="text-xl font-semibold">Joining meeting</h1>
+          <p className="text-sm text-[#94A3B8]">
+            Establishing secure connection to the room...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <ActiveMeetingRoom meeting={meeting} isJoined={isJoined} onLeave={handleLeave} />;
 }
 
 export default function MeetingRoomPageClient() {

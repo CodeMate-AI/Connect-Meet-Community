@@ -45,15 +45,17 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
     const text = draft.trim();
     if (!text || !isChatAllowed) return;
 
-    await publish(text, { persist: true }, { kind: "chat" });
+    const publishOptions: any = { persist: true, payload: { kind: "chat" } };
+    await publish(text, publishOptions);
     setDraft("");
   };
 
   const renderedMessages = useMemo(() => {
     const seen = new Set<string>();
-    return messages.filter((message) => {
-      if (seen.has(message.id)) return false;
-      seen.add(message.id);
+    return messages.filter((message, index) => {
+      const key = message.id || `${message.senderId}-${message.timestamp}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
   }, [messages]);
@@ -84,10 +86,11 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
             </div>
           </div>
         ) : (
-          renderedMessages.map((message) => {
+          renderedMessages.map((message, index) => {
             const isSelf = message.senderId === localParticipantId;
+            const uniqueKey = message.id || `msg-${message.senderId}-${message.timestamp}-${index}`;
             return (
-              <div key={message.id} className={cn("flex", isSelf ? "justify-end" : "justify-start")}>
+              <div key={uniqueKey} className={cn("flex", isSelf ? "justify-end" : "justify-start")}>
                 <div
                   className={cn(
                     "max-w-[85%] rounded-2xl border px-3 py-2 shadow-sm",
