@@ -16,6 +16,8 @@ import EmptyRoomState from "@/components/call/EmptyRoomState";
 import Icon from "@/components/Icon";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
+const MIC_ENABLED_KEY = "connectmeet_mic_enabled";
+const WEBCAM_ENABLED_KEY = "connectmeet_webcam_enabled";
 
 type PresenceMap = Record<string, boolean>;
 type ReactionMap = Record<string, string | null>;
@@ -307,6 +309,8 @@ export default function MeetingRoomPageClient() {
   const meetingId = (params.id as string) || "";
 
   const [displayName, setDisplayName] = useState("Guest");
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [webcamEnabled, setWebcamEnabled] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -317,6 +321,17 @@ export default function MeetingRoomPageClient() {
         ? localStorage.getItem(DISPLAY_NAME_KEY) || "Guest"
         : "Guest";
     setDisplayName(savedName);
+
+    if (typeof window === "undefined") return;
+
+    const readBooleanPref = (key: string, fallback: boolean) => {
+      const stored = localStorage.getItem(key);
+      if (stored === null) return fallback;
+      return stored !== "false";
+    };
+
+    setMicEnabled(readBooleanPref(MIC_ENABLED_KEY, true));
+    setWebcamEnabled(readBooleanPref(WEBCAM_ENABLED_KEY, true));
   }, []);
 
   useEffect(() => {
@@ -359,6 +374,11 @@ export default function MeetingRoomPageClient() {
         }
 
         if (!cancelled) {
+          if (typeof window !== "undefined") {
+            if ((VideoSDK as any).apiKey !== data.token) {
+              VideoSDK.config(data.token);
+            }
+          }
           setToken(data.token);
         }
       } catch (fetchError) {
@@ -387,13 +407,13 @@ export default function MeetingRoomPageClient() {
     () => ({
       meetingId,
       name: displayName,
-      micEnabled: true,
-      webcamEnabled: true,
+      micEnabled,
+      webcamEnabled,
       autoConsume: true,
       debugMode: false,
       multiStream: true,
     }),
-    [displayName, meetingId]
+    [displayName, meetingId, micEnabled, webcamEnabled]
   );
 
   const handleReturn = useCallback(() => {
@@ -438,10 +458,6 @@ export default function MeetingRoomPageClient() {
         </div>
       </div>
     );
-  }
-
-  if (typeof window !== "undefined") {
-    VideoSDK.config(token);
   }
 
   return (
