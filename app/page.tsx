@@ -55,28 +55,52 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col min-w-0">
         {/* Top Bar */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white border-b border-[#E2E8F0]">
-          <div>
-            <h1 className="font-heading text-xl font-bold text-[#0F172A]">
-              {greeting}, {displayName}
-            </h1>
-            <p className="text-sm text-[#64748B] mt-0.5">
-              Here is what is happening with your meetings today.
-            </p>
+        <header className="bg-white border-b border-[#E2E8F0] px-4 py-4 md:px-6 md:py-4">
+          <div className="flex items-center justify-between gap-3 md:hidden mb-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#0B5CFF] shrink-0">
+                <Icon name="Video" className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-heading text-base font-bold text-[#0F172A]">
+                ConnectMeet
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F1F5F9] transition-colors text-[#64748B]">
+                <Icon name="Settings" className="w-[18px] h-[18px]" />
+              </button>
+              <Avatar size="sm">
+                <AvatarImage src={avatarSrc} alt={displayName} />
+                <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+              </Avatar>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[#F1F5F9] transition-colors text-[#64748B]">
-              <Icon name="Settings" className="w-5 h-5" />
-            </button>
-            <Avatar size="sm">
-              <AvatarImage src={avatarSrc} alt={displayName} />
-              <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-            </Avatar>
+
+          {/* Greeting info */}
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <h1 className="font-heading text-lg sm:text-xl font-bold text-[#0F172A] leading-tight">
+                {greeting}, {displayName}
+              </h1>
+              <p className="text-xs sm:text-sm text-[#64748B] mt-0.5">
+                Here is what is happening with your meetings today.
+              </p>
+            </div>
+            {/* Desktop-only Avatar & Settings */}
+            <div className="hidden md:flex items-center gap-3">
+              <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[#F1F5F9] transition-colors text-[#64748B]">
+                <Icon name="Settings" className="w-5 h-5" />
+              </button>
+              <Avatar size="sm">
+                <AvatarImage src={avatarSrc} alt={displayName} />
+                <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
+              </Avatar>
+            </div>
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 px-6 py-6 space-y-6 overflow-auto">
+        <div className="flex-1 px-4 py-4 sm:px-6 sm:py-6 space-y-6 overflow-auto">
           <QuickActions />
           <MeetingList />
         </div>

@@ -40,7 +40,7 @@ export default function MeetingList() {
 
   return (
     <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-[#E2E8F0]">
+      <div className="flex items-center justify-between px-4 py-3 md:px-5 md:py-4 border-b border-[#E2E8F0]">
         <h2 className="font-heading text-base font-semibold text-[#0F172A]">
           Upcoming Meetings
         </h2>
@@ -52,7 +52,7 @@ export default function MeetingList() {
 
       <div className="divide-y divide-[#E2E8F0]">
         {sortedMeetings.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <div className="w-12 h-12 rounded-full bg-[#F1F5F9] flex items-center justify-center mb-3">
               <Icon name="Calendar" className="w-6 h-6 text-[#94A3B8]" />
             </div>
@@ -73,53 +73,55 @@ export default function MeetingList() {
           return (
             <div
               key={meeting.id}
-              className="flex items-center gap-4 px-5 py-4 hover:bg-[#F9FAFB] transition-colors"
+              className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 px-4 py-4 md:px-5 hover:bg-[#F9FAFB] transition-colors"
             >
-              {/* Date Badge */}
-              <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0] shrink-0">
-                <span className="text-[10px] font-bold text-[#64748B] leading-none uppercase tracking-wider">
-                  {month}
-                </span>
-                <span className="text-lg font-heading font-bold text-[#0F172A] leading-none mt-0.5">
-                  {day}
-                </span>
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-[#0F172A] truncate">
-                    {meeting.title}
-                  </h3>
-                  {isToday && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#0B5CFF]/10 text-[#0B5CFF]">
-                      Today
-                    </span>
-                  )}
-                  {isPast && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#F1F5F9] text-[#94A3B8]">
-                      Past
-                    </span>
-                  )}
+              <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                {/* Date Badge */}
+                <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-[#F1F5F9] border border-[#E2E8F0] shrink-0">
+                  <span className="text-[10px] font-bold text-[#64748B] leading-none uppercase tracking-wider">
+                    {month}
+                  </span>
+                  <span className="text-lg font-heading font-bold text-[#0F172A] leading-none mt-0.5">
+                    {day}
+                  </span>
                 </div>
-                <div className="flex items-center gap-3 mt-0.5">
-                  <span className="text-xs text-[#64748B] flex items-center gap-1">
-                    <Icon name="Clock" className="w-3 h-3" />
-                    {meeting.time}
-                  </span>
-                  <span className="text-xs text-[#64748B] flex items-center gap-1">
-                    <Icon name="Timer" className="w-3 h-3" />
-                    {meeting.duration}
-                  </span>
-                  <span className="text-xs text-[#64748B] flex items-center gap-1">
-                    <Icon name="Users" className="w-3 h-3" />
-                    {meeting.participants}
-                  </span>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start sm:items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-medium text-[#0F172A] truncate">
+                      {meeting.title}
+                    </h3>
+                    {isToday && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#0B5CFF]/10 text-[#0B5CFF]">
+                        Today
+                      </span>
+                    )}
+                    {isPast && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#F1F5F9] text-[#94A3B8]">
+                        Past
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-xs text-[#64748B] flex items-center gap-1">
+                      <Icon name="Clock" className="w-3 h-3" />
+                      {meeting.time}
+                    </span>
+                    <span className="text-xs text-[#64748B] flex items-center gap-1">
+                      <Icon name="Timer" className="w-3 h-3" />
+                      {meeting.duration}
+                    </span>
+                    <span className="text-xs text-[#64748B] flex items-center gap-1">
+                      <Icon name="Users" className="w-3 h-3" />
+                      {meeting.participants}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center justify-end gap-2 shrink-0 self-end sm:self-auto w-full sm:w-auto border-t border-[#E2E8F0]/30 pt-2 sm:pt-0 sm:border-0">
                 <Button
                   variant="ghost"
                   size="icon-sm"

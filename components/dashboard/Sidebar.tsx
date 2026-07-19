@@ -5,7 +5,7 @@ import Icon from "@/components/Icon";
 
 export default function Sidebar() {
   return (
-    <aside className="w-64 shrink-0 flex flex-col bg-white border-r border-[#E2E8F0] h-screen sticky top-0">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-white border-r border-[#E2E8F0] h-screen sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-6 py-5">
         <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#0B5CFF]">
