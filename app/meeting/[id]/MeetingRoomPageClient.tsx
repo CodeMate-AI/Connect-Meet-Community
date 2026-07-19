@@ -15,6 +15,17 @@ import ChatPanel from "@/components/call/ChatPanel";
 import EmptyRoomState from "@/components/call/EmptyRoomState";
 import Icon from "@/components/Icon";
 
+if (typeof window !== "undefined") {
+  const originalConfig = VideoSDK.config;
+  VideoSDK.config = function (token: string) {
+    if (!token) return;
+    if ((VideoSDK as any).apiKey === token) {
+      return;
+    }
+    originalConfig.call(VideoSDK, token);
+  };
+}
+
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
 const MIC_ENABLED_KEY = "connectmeet_mic_enabled";
 const WEBCAM_ENABLED_KEY = "connectmeet_webcam_enabled";
@@ -128,7 +139,7 @@ function ActiveMeetingRoom({
     [clock, participantIds, reactionMessages]
   );
 
-  const sidebar = showSidebar ? (
+  const desktopSidebar = showSidebar ? (
     <div className="hidden xl:flex min-h-0 flex-col gap-4">
       {participantsOpen && (
         <ParticipantsPanel
@@ -145,6 +156,19 @@ function ActiveMeetingRoom({
           className="min-h-0 flex-1"
         />
       )}
+    </div>
+  ) : null;
+
+  const mobileOverlayPanels = showSidebar ? (
+    <div className="xl:hidden">
+      {participantsOpen && (
+        <ParticipantsPanel
+          open={participantsOpen}
+          onOpenChange={setParticipantsOpen}
+          raisedHands={raisedHands}
+        />
+      )}
+      {chatOpen && <ChatPanel open={chatOpen} onOpenChange={setChatOpen} />}
     </div>
   ) : null;
 
@@ -187,8 +211,10 @@ function ActiveMeetingRoom({
           )}
         </main>
 
-        {showSidebar && sidebar}
+        {showSidebar && desktopSidebar}
       </div>
+
+      {mobileOverlayPanels}
 
       <ControlBar
         onLeave={onLeave}

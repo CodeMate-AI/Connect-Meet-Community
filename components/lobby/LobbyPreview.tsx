@@ -290,79 +290,79 @@ export default function LobbyPreview({ userName }: LobbyPreviewProps) {
         <div className="absolute left-4 top-4 rounded-lg border border-white/10 bg-black/40 px-3 py-1.5 backdrop-blur-md">
           <span className="text-xs font-medium text-white/90">{userName || "Guest"}</span>
         </div>
+      </div>
 
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 flex-col gap-3 rounded-2xl border border-white/10 bg-black/45 px-4 py-3 backdrop-blur-md sm:flex-row sm:items-center">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleMic}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                  micOn ? "bg-white/10 text-white hover:bg-white/20" : "bg-red-500/80 text-white hover:bg-red-500"
-                }`}
-                title={micOn ? "Mute microphone" : "Unmute microphone"}
-              >
-                <Icon name={micOn ? "Mic" : "MicOff"} className="h-5 w-5" />
-              </button>
-              <Select
-                value={selectedMicId}
-                onValueChange={(value) => {
-                  setSelectedMicId(value);
-                  persistSettings({ micId: value });
-                  void startMedia();
-                }}
-              >
-                <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
-                  <SelectValue placeholder="Select microphone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {micOptions.map((device) => (
-                    <SelectItem key={device.deviceId || "default-mic"} value={device.deviceId}>
-                      {device.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <span className="text-center text-[10px] text-[#94A3B8] sm:text-left">
-              Microphone
-            </span>
+      <div className="mt-4 flex w-full flex-col gap-3 rounded-2xl border border-white/10 bg-black/45 px-4 py-3 backdrop-blur-md sm:absolute sm:bottom-4 sm:left-1/2 sm:mt-0 sm:w-auto sm:-translate-x-1/2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleMic}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                micOn ? "bg-white/10 text-white hover:bg-white/20" : "bg-red-500/80 text-white hover:bg-red-500"
+              }`}
+              title={micOn ? "Mute microphone" : "Unmute microphone"}
+            >
+              <Icon name={micOn ? "Mic" : "MicOff"} className="h-5 w-5" />
+            </button>
+            <Select
+              value={selectedMicId}
+              onValueChange={(value) => {
+                setSelectedMicId(value);
+                persistSettings({ micId: value });
+                void startMedia();
+              }}
+            >
+              <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
+                <SelectValue placeholder="Select microphone" />
+              </SelectTrigger>
+              <SelectContent>
+                {micOptions.map((device) => (
+                  <SelectItem key={device.deviceId || "default-mic"} value={device.deviceId}>
+                    {device.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          <span className="text-center text-[10px] text-[#94A3B8] sm:text-left">
+            Microphone
+          </span>
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggleCamera}
-                className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                  cameraOn ? "bg-white/10 text-white hover:bg-white/20" : "bg-red-500/80 text-white hover:bg-red-500"
-                }`}
-                title={cameraOn ? "Turn off camera" : "Turn on camera"}
-              >
-                <Icon name={cameraOn ? "Video" : "VideoOff"} className="h-5 w-5" />
-              </button>
-              <Select
-                value={selectedCameraId}
-                onValueChange={(value) => {
-                  setSelectedCameraId(value);
-                  persistSettings({ cameraId: value });
-                  void startMedia();
-                }}
-              >
-                <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
-                  <SelectValue placeholder="Select camera" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cameraOptions.map((device) => (
-                    <SelectItem key={device.deviceId || "default-camera"} value={device.deviceId}>
-                      {device.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <span className="text-center text-[10px] text-[#94A3B8] sm:text-left">
-              Camera
-            </span>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleCamera}
+              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                cameraOn ? "bg-white/10 text-white hover:bg-white/20" : "bg-red-500/80 text-white hover:bg-red-500"
+              }`}
+              title={cameraOn ? "Turn off camera" : "Turn on camera"}
+            >
+              <Icon name={cameraOn ? "Video" : "VideoOff"} className="h-5 w-5" />
+            </button>
+            <Select
+              value={selectedCameraId}
+              onValueChange={(value) => {
+                setSelectedCameraId(value);
+                persistSettings({ cameraId: value });
+                void startMedia();
+              }}
+            >
+              <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
+                <SelectValue placeholder="Select camera" />
+              </SelectTrigger>
+              <SelectContent>
+                {cameraOptions.map((device) => (
+                  <SelectItem key={device.deviceId || "default-camera"} value={device.deviceId}>
+                    {device.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+          <span className="text-center text-[10px] text-[#94A3B8] sm:text-left">
+            Camera
+          </span>
         </div>
       </div>
     </div>
