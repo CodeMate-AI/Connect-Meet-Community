@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import { useMeeting } from "@videosdk.live/react-sdk";
 import VideoTile from "./VideoTile";
 
@@ -13,28 +13,29 @@ export default function VideoGrid({
   raisedHands = {},
   reactions = {},
 }: VideoGridProps) {
-  const meeting = useMeeting();
-  const allParticipants = useMemo(() => {
-    const list = Array.from(meeting.participants.values());
-    if (meeting.localParticipant) {
-      const exists = list.some((p) => p.id === meeting.localParticipant.id);
-      if (!exists) {
-        list.unshift(meeting.localParticipant);
-      }
+  const [, setPresenterIdState] = useState<string | null>(null);
+
+  const meeting = useMeeting({
+    onPresenterChanged: (presenterId) => {
+      setPresenterIdState(presenterId);
+    },
+  });
+
+  const allParticipants = Array.from(meeting.participants.values());
+  if (meeting.localParticipant) {
+    const exists = allParticipants.some((p) => p.id === meeting.localParticipant.id);
+    if (!exists) {
+      allParticipants.unshift(meeting.localParticipant);
     }
-    return list;
-  }, [meeting.participants, meeting.localParticipant]);
+  }
+
   const presenterId = meeting.presenterId || meeting.activeSpeakerId || null;
   const localParticipantId = meeting.localParticipant?.id || "";
 
-  const screenSharers = useMemo(
-    () =>
-      allParticipants.filter((participant) => {
-        const meta = participant.metaData as { isScreenSharing?: boolean } | undefined;
-        return Boolean(meta?.isScreenSharing || participant.screenShareOn);
-      }),
-    [allParticipants]
-  );
+  const screenSharers = allParticipants.filter((participant) => {
+    const meta = participant.metaData as { isScreenSharing?: boolean } | undefined;
+    return Boolean(meta?.isScreenSharing || participant.screenShareOn);
+  });
 
   const focusedParticipantId =
     screenSharers[0]?.id || presenterId || meeting.mainParticipant?.id || null;
