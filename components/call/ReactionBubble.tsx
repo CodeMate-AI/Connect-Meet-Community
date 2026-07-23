@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ReactionBubbleProps {
   emoji?: string | null;
@@ -14,18 +14,35 @@ interface BubbleItem {
 
 export function useReactionBubbles(incoming: string | null | undefined) {
   const [bubbles, setBubbles] = useState<BubbleItem[]>([]);
-  const [lastSeen, setLastSeen] = useState<string | null>(null);
+  const lastSeenRef = useRef<string | null>(null);
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   useEffect(() => {
-    if (!incoming || incoming === lastSeen) return;
-    setLastSeen(incoming);
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setBubbles((prev) => [...prev, { id, emoji: incoming }]);
+    if (!incoming) {
+      lastSeenRef.current = null;
+      return;
+    }
+
+    if (incoming === lastSeenRef.current) return;
+
+    lastSeenRef.current = incoming;
+    const bubbleId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setBubbles((prev) => [...prev, { id: bubbleId, emoji: incoming }]);
+
     const timer = setTimeout(() => {
-      setBubbles((prev) => prev.filter((b) => b.id !== id));
+      setBubbles((prev) => prev.filter((b) => b.id !== bubbleId));
+      timersRef.current.delete(timer);
     }, 3000);
-    return () => clearTimeout(timer);
-  }, [incoming, lastSeen]);
+
+    timersRef.current.add(timer);
+  }, [incoming]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach((timer) => clearTimeout(timer));
+      timersRef.current.clear();
+    };
+  }, []);
 
   return bubbles;
 }
