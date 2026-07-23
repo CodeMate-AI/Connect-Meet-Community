@@ -43,7 +43,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
-        <script src="/codemate-badge.js" defer></script>
       </body>
     </html>
   );
