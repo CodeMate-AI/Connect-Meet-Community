@@ -66,9 +66,6 @@ export default function Home() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <button className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F1F5F9] transition-colors text-[#64748B]">
-                <Icon name="Settings" className="w-[18px] h-[18px]" />
-              </button>
               <Avatar size="sm">
                 <AvatarImage src={avatarSrc} alt={displayName} />
                 <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
@@ -88,9 +85,6 @@ export default function Home() {
             </div>
             {/* Desktop-only Avatar & Settings */}
             <div className="hidden md:flex items-center gap-3">
-              <button className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[#F1F5F9] transition-colors text-[#64748B]">
-                <Icon name="Settings" className="w-5 h-5" />
-              </button>
               <Avatar size="sm">
                 <AvatarImage src={avatarSrc} alt={displayName} />
                 <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
