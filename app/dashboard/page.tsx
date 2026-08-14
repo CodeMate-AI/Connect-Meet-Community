@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import Sidebar from "@/components/dashboard/Sidebar";
 import QuickActions from "@/components/dashboard/QuickActions";
 import MeetingList from "@/components/dashboard/MeetingList";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import AnonymousAvatar from "@/components/ui/AnonymousAvatar";
 import Icon from "@/components/Icon";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
@@ -15,16 +15,6 @@ function getGreeting(): string {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "G";
-  return parts
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 export default function DashboardPage() {
@@ -44,11 +34,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const avatarSrc = useMemo(
-    () => `https://i.pravatar.cc/150?u=${encodeURIComponent(displayName)}`,
-    [displayName]
-  );
-
   return (
     <div className="flex min-h-screen bg-[#F9FAFB]">
       <Sidebar />
@@ -65,10 +50,9 @@ export default function DashboardPage() {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Avatar size="sm">
-                <AvatarImage src={avatarSrc} alt={displayName} />
-                <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-              </Avatar>
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-[#E2E8F0] shrink-0">
+                <AnonymousAvatar />
+              </div>
             </div>
           </div>
 
@@ -82,10 +66,9 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="hidden md:flex items-center gap-3">
-              <Avatar size="sm">
-                <AvatarImage src={avatarSrc} alt={displayName} />
-                <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-              </Avatar>
+              <div className="w-9 h-9 rounded-full overflow-hidden border border-[#E2E8F0] shrink-0 shadow-xs">
+                <AnonymousAvatar />
+              </div>
             </div>
           </div>
         </header>

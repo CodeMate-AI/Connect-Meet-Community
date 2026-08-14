@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useParticipant } from "@videosdk.live/react-sdk";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import AnonymousAvatar from "@/components/ui/AnonymousAvatar";
 import { cn } from "@/lib/utils";
 import Icon from "@/components/Icon";
 import { ReactionBubbleContainer } from "@/components/call/ReactionBubble";
@@ -17,17 +17,6 @@ type VideoTileProps = {
   reaction?: string | null;
   spotlight?: boolean;
 };
-
-function getInitials(name: string): string {
-  return (
-    name
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "U"
-  );
-}
 
 export default function VideoTile({
   participantId,
@@ -98,8 +87,6 @@ export default function VideoTile({
     }
   }, [isAudioEnabled, isLocal, selectedAudioStream, showAudio]);
 
-  const avatarSrc = `https://i.pravatar.cc/150?u=${encodeURIComponent(displayName || participantId)}`;
-
   return (
     <div
       className={cn(
@@ -128,12 +115,9 @@ export default function VideoTile({
 
       {!isVideoEnabled ? (
         <div className="absolute inset-0 flex items-center justify-center bg-[#111827]">
-          <Avatar className="h-20 w-20 border border-white/10">
-            <AvatarImage src={avatarSrc} alt={displayName || participantId} />
-            <AvatarFallback className="bg-[#1E293B] text-2xl text-[#E2E8F0]">
-              {getInitials(displayName || participantId)}
-            </AvatarFallback>
-          </Avatar>
+          <div className="h-20 w-20 rounded-2xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+            <AnonymousAvatar />
+          </div>
         </div>
       ) : null}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import AnonymousAvatar from "@/components/ui/AnonymousAvatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Icon from "@/components/Icon";
 
@@ -254,20 +254,9 @@ export default function LobbyPreview({ userName }: LobbyPreviewProps) {
 
         {(!cameraOn || permissionDenied) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center">
-            <Avatar size="lg" className="h-20 w-20">
-              <AvatarImage
-                src={`https://i.pravatar.cc/150?u=${encodeURIComponent(userName)}`}
-                alt={userName}
-              />
-              <AvatarFallback className="bg-[#1E293B] text-2xl text-[#E2E8F0]">
-                {userName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
+            <div className="h-20 w-20 rounded-2xl overflow-hidden shadow-lg border border-white/10 shrink-0">
+              <AnonymousAvatar />
+            </div>
             {permissionDenied && (
               <div>
                 <p className="text-sm text-[#94A3B8]">
