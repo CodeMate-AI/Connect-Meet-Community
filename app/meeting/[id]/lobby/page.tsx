@@ -80,7 +80,7 @@ export default function LobbyPage() {
               onKeyDown={handleKeyDown}
               className={
                 nameError
-                  ? "border-destructive focus-visible:ring-destructive/20 bg-[#1E293B] border-white/10 text-[#E2E8F0] placeholder:text-[#64748B]"
+                  ? "border-destructive focus-visible:ring-destructive/20 bg-[#1E293B] text-[#E2E8F0] placeholder:text-[#64748B]"
                   : "bg-[#1E293B] border-white/10 text-[#E2E8F0] placeholder:text-[#64748B]"
               }
             />

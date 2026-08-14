@@ -205,7 +205,7 @@ function ActiveMeetingRoom({
           {showMainGrid ? (
             <VideoGrid raisedHands={raisedHands} reactions={reactions} />
           ) : (
-            <div className="h-full min-h-[28rem] rounded-2xl border border-dashed border-white/10 bg-[#0B1120]/70">
+            <div className="h-full min-h-112 rounded-2xl border border-dashed border-white/10 bg-[#0B1120]/70">
               <EmptyRoomState meetingId={meeting.meetingId} />
             </div>
           )}
@@ -300,7 +300,7 @@ function MeetingRoomContent() {
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={handleLeave}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-[#E2E8F0] transition-colors hover:bg-white/10"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-[#E2E8F0] transition-colors hover:bg-white/10"
             >
               Return to dashboard
             </button>
@@ -476,7 +476,7 @@ export default function MeetingRoomPageClient() {
           <div className="flex items-center justify-center gap-3">
             <button
               onClick={handleReturn}
-              className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-[#E2E8F0] transition-colors hover:bg-white/10"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-medium text-[#E2E8F0] transition-colors hover:bg-white/10"
             >
               Return to dashboard
             </button>

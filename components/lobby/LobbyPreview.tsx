@@ -235,7 +235,7 @@ export default function LobbyPreview({ userName }: LobbyPreviewProps) {
 
   return (
     <div className="relative mx-auto w-full max-w-2xl">
-      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111827]">
+      <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/8 bg-[#111827]">
         {loading && !permissionDenied && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
@@ -301,7 +301,7 @@ export default function LobbyPreview({ userName }: LobbyPreviewProps) {
                 void startMedia();
               }}
             >
-              <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
+              <SelectTrigger className="h-10 min-w-0 max-w-48 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-56">
                 <SelectValue placeholder="Select microphone" />
               </SelectTrigger>
               <SelectContent>
@@ -337,7 +337,7 @@ export default function LobbyPreview({ userName }: LobbyPreviewProps) {
                 void startMedia();
               }}
             >
-              <SelectTrigger className="h-10 min-w-0 max-w-[12rem] border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-[14rem]">
+              <SelectTrigger className="h-10 min-w-0 max-w-48 border-white/10 bg-white/5 text-xs text-white hover:bg-white/10 sm:max-w-56">
                 <SelectValue placeholder="Select camera" />
               </SelectTrigger>
               <SelectContent>

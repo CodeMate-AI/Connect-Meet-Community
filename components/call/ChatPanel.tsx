@@ -65,7 +65,7 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
         <div className="flex items-center gap-2">
           <h2 className="font-heading text-base font-semibold text-[#E2E8F0]">Chat</h2>
-          <span className="inline-flex min-w-[22px] items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
+          <span className="inline-flex min-w-5.5 items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
             {messages.length}
           </span>
         </div>
@@ -79,7 +79,7 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {renderedMessages.length === 0 ? (
-          <div className="flex h-full min-h-[12rem] items-center justify-center text-center px-4">
+          <div className="flex h-full min-h-48 items-center justify-center text-center px-4">
             <div>
               <Icon name="MessageSquare" className="mx-auto mb-2 h-8 w-8 text-[#64748B]" />
               <p className="text-sm text-[#94A3B8]">No messages yet</p>
@@ -96,7 +96,7 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
                     "max-w-[85%] rounded-2xl border px-3 py-2 shadow-sm",
                     isSelf
                       ? "rounded-br-md border-[#0B5CFF]/20 bg-[#0B5CFF] text-white"
-                      : "rounded-bl-md border-white/[0.08] bg-[#1E293B] text-[#E2E8F0]"
+                      : "rounded-bl-md border-white/8 bg-[#1E293B] text-[#E2E8F0]"
                   )}
                 >
                   <div className="mb-1 flex items-center justify-between gap-3">
@@ -105,7 +105,7 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
                     </span>
                     <span className="text-[10px] opacity-70">{formatTime(message.timestamp)}</span>
                   </div>
-                  <p className="break-words text-sm leading-relaxed">{message.message}</p>
+                  <p className="wrap-break-word text-sm leading-relaxed">{message.message}</p>
                 </div>
               </div>
             );
@@ -114,14 +114,14 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
         <div ref={bottomRef} />
       </div>
 
-      <SheetFooter className="border-t border-white/[0.06] bg-[#0B1120] px-4 py-3">
+      <SheetFooter className="border-t border-white/6 bg-[#0B1120] px-4 py-3">
         <div className="flex w-full items-center gap-2">
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void sendChat()}
             placeholder="Send a message..."
-            className="border-white/[0.08] bg-[#1E293B] text-[#E2E8F0] placeholder:text-[#64748B]"
+            className="border-white/8 bg-[#1E293B] text-[#E2E8F0] placeholder:text-[#64748B]"
           />
           <Button onClick={() => void sendChat()} disabled={!draft.trim()} className="bg-[#0B5CFF]">
             Send
@@ -135,14 +135,14 @@ export default function ChatPanel({ open, onOpenChange, className }: ChatPanelPr
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full w-full flex-col border-l border-white/[0.08] bg-[#0F172A] p-0"
+        className="flex h-full w-full flex-col border-l border-white/8 bg-[#0F172A] p-0"
         showCloseButton={false}
       >
-        <SheetHeader className="border-b border-white/[0.08] px-5 py-4">
+        <SheetHeader className="border-b border-white/8 px-5 py-4">
           <div className="flex w-full items-center justify-between">
             <div className="flex items-center gap-2">
               <SheetTitle className="text-[#E2E8F0]">Chat</SheetTitle>
-              <span className="inline-flex min-w-[22px] items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
+              <span className="inline-flex min-w-5.5 items-center justify-center rounded-md bg-[#0B5CFF]/15 px-1.5 py-1 text-xs font-bold text-[#0B5CFF]">
                 {messages.length}
               </span>
             </div>

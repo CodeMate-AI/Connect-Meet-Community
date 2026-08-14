@@ -96,7 +96,7 @@ export default function VideoTile({
         className
       )}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/45" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-black/45" />
 
       {isVideoEnabled ? (
         <video

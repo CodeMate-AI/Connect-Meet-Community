@@ -24,9 +24,9 @@ export default function ReconnectBanner({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-center pointer-events-none">
+    <div className="fixed top-0 left-0 right-0 z-60 flex items-center justify-center pointer-events-none">
       <div
-        className="mt-4 mx-4 flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#0F172A]/90 backdrop-blur-xl border border-white/[0.08] shadow-2xl shadow-black/40 pointer-events-auto"
+        className="mt-4 mx-4 flex items-center gap-3 px-5 py-2.5 rounded-full bg-[#0F172A]/90 backdrop-blur-xl border border-white/8 shadow-2xl shadow-black/40 pointer-events-auto"
       >
         {status === "reconnecting" ? (
           <>
