@@ -10,13 +10,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
-function getStrength(password: string) {
+function getStrengthStatus(password: string) {
+  if (!password || password.length === 0) {
+    return { percent: 0, label: "None", textColor: "text-slate-400", barColor: "bg-slate-200" };
+  }
+
   let score = 0;
   if (password.length >= 8) score += 1;
   if (/[A-Z]/.test(password)) score += 1;
   if (/[0-9]/.test(password)) score += 1;
   if (/[^A-Za-z0-9]/.test(password)) score += 1;
-  return score;
+
+  if (score <= 1) {
+    return { percent: 33, label: "Weak", textColor: "text-red-500 font-semibold", barColor: "bg-red-500" };
+  }
+  if (score <= 3) {
+    return { percent: 66, label: "Fair", textColor: "text-amber-500 font-semibold", barColor: "bg-amber-500" };
+  }
+  return { percent: 100, label: "Strong", textColor: "text-emerald-600 font-semibold", barColor: "bg-emerald-500" };
 }
 
 function SignupForm() {
@@ -34,7 +45,7 @@ function SignupForm() {
   const [emailSent, setEmailSent] = useState(false);
   const [resending, setResending] = useState(false);
 
-  const strength = useMemo(() => getStrength(password), [password]);
+  const strengthStatus = useMemo(() => getStrengthStatus(password), [password]);
   const passwordsMatch = password === confirmPassword;
   const canSubmit = fullName.trim() && email.trim() && password.length >= 6 && acceptTerms && passwordsMatch;
 
@@ -180,9 +191,13 @@ function SignupForm() {
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>Password strength</span>
-                <span>{strength <= 1 ? "Weak" : strength === 2 ? "Fair" : "Strong"}</span>
+                <span className={strengthStatus.textColor}>{strengthStatus.label}</span>
               </div>
-              <Progress value={Math.max(15, strength * 25)} className="h-2" />
+              <Progress
+                value={strengthStatus.percent}
+                indicatorClassName={strengthStatus.barColor}
+                className="h-2"
+              />
             </div>
           </div>
           <div className="space-y-2">
