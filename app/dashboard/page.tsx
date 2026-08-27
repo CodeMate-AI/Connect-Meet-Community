@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Sidebar from "@/components/dashboard/Sidebar";
 import QuickActions from "@/components/dashboard/QuickActions";
 import MeetingList from "@/components/dashboard/MeetingList";
+import { useAuth } from "@/lib/auth-context";
 import AnonymousAvatar from "@/components/ui/AnonymousAvatar";
 import Icon from "@/components/Icon";
-
-const DISPLAY_NAME_KEY = "connectmeet_display_name";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -18,14 +17,11 @@ function getGreeting(): string {
 }
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
   const [greeting, setGreeting] = useState("Welcome");
-  const [displayName, setDisplayName] = useState("Guest");
 
   useEffect(() => {
     setGreeting(getGreeting());
-    if (typeof window === "undefined") return;
-
-    setDisplayName(localStorage.getItem(DISPLAY_NAME_KEY) || "Guest");
 
     const kicked = new URLSearchParams(window.location.search).get("kicked");
     if (kicked === "true") {
@@ -33,6 +29,8 @@ export default function DashboardPage() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Guest";
 
   return (
     <div className="flex min-h-screen bg-[#F9FAFB]">
@@ -45,9 +43,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#0B5CFF] shrink-0">
                 <Icon name="Video" className="w-5 h-5 text-white" />
               </div>
-              <span className="font-heading text-base font-bold text-[#0F172A]">
-                ConnectMeet
-              </span>
+              <span className="font-heading text-base font-bold text-[#0F172A]">ConnectMeet</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full overflow-hidden border border-[#E2E8F0] shrink-0">

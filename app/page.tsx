@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import Icon from "@/components/Icon";
 import type { IconName } from "@/components/Icon";
+import { useAuth } from "@/lib/auth-context";
 
 interface FeatureCardProps {
   icon: IconName;
@@ -40,7 +41,7 @@ function FeatureCard({ icon, title, description, badge }: FeatureCardProps) {
 const FAQ_ITEMS = [
   {
     q: "Is ConnectMeet free to use without creating an account?",
-    a: "Yes! You can instantly create rooms or join ongoing meetings without signing up or entering credentials. Simply click 'Enter Dashboard' to get started.",
+    a: "Yes! You can easily sign up in seconds or join ongoing meetings with a single click.",
   },
   {
     q: "How does screen sharing and chat work?",
@@ -59,6 +60,13 @@ const FAQ_ITEMS = [
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { user } = useAuth();
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    "Guest";
+  const loggedIn = Boolean(user);
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] text-[#0F172A] flex flex-col selection:bg-[#0B5CFF]/20 selection:text-[#0B5CFF] overflow-x-hidden">
@@ -77,28 +85,58 @@ export default function LandingPage() {
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-[#64748B]">
-            <a href="#features" className="hover:text-[#0B5CFF] transition-colors">Features</a>
-            <a href="#how-it-works" className="hover:text-[#0B5CFF] transition-colors">How It Works</a>
-            <a href="#preview" className="hover:text-[#0B5CFF] transition-colors">Experience</a>
-            <a href="#faq" className="hover:text-[#0B5CFF] transition-colors">FAQ</a>
+            <a href="#features" className="hover:text-[#0B5CFF] transition-colors">
+              Features
+            </a>
+            <a href="#how-it-works" className="hover:text-[#0B5CFF] transition-colors">
+              How It Works
+            </a>
+            <a href="#preview" className="hover:text-[#0B5CFF] transition-colors">
+              Experience
+            </a>
+            <a href="#faq" className="hover:text-[#0B5CFF] transition-colors">
+              FAQ
+            </a>
           </nav>
 
-          {/* Enter Dashboard CTA */}
+          {/* Header Action CTAs */}
           <div className="hidden sm:flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20 hover:shadow-lg hover:shadow-[#0B5CFF]/30 transition-all active:scale-[0.98]"
-            >
-              <span>Enter Dashboard</span>
-              <Icon name="ArrowRight" className="w-4 h-4" />
-            </Link>
+            {loggedIn ? (
+              <>
+                <span className="hidden lg:inline-flex items-center rounded-full border border-[#0B5CFF]/20 bg-[#0B5CFF]/10 px-3 py-1.5 text-xs font-semibold text-[#0B5CFF]">
+                  Hi, {displayName}
+                </span>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20 hover:shadow-lg hover:shadow-[#0B5CFF]/30 transition-all active:scale-[0.98]"
+                >
+                  <span>Enter Dashboard</span>
+                  <Icon name="ArrowRight" className="w-4 h-4" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#E2E8F0] text-sm font-semibold text-[#0F172A] hover:bg-slate-50 transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20 hover:shadow-lg hover:shadow-[#0B5CFF]/30 transition-all active:scale-[0.98]"
+                >
+                  Get Started Free
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100"
-            aria-label="Toggle menu"
+            aria-label="Toggle navigation menu"
           >
             <Icon name={mobileMenuOpen ? "X" : "Menu"} className="w-6 h-6" />
           </button>
@@ -135,14 +173,34 @@ export default function LandingPage() {
             >
               FAQ
             </a>
-            <div className="pt-2">
-              <Link
-                href="/dashboard"
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20"
-              >
-                <span>Enter Dashboard</span>
-                <Icon name="ArrowRight" className="w-4 h-4" />
-              </Link>
+            <div className="pt-2 flex flex-col gap-2">
+              {loggedIn ? (
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20"
+                >
+                  <span>Enter Dashboard</span>
+                  <Icon name="ArrowRight" className="w-4 h-4" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white border border-[#E2E8F0] text-sm font-semibold text-[#0F172A]"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white text-sm font-semibold shadow-md shadow-[#0B5CFF]/20"
+                  >
+                    Get Started Free
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -165,13 +223,31 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/30 hover:shadow-xl hover:shadow-[#0B5CFF]/40 transition-all duration-200 active:scale-[0.98]"
-            >
-              <span>Enter Dashboard</span>
-              <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Link>
+            {loggedIn ? (
+              <Link
+                href="/dashboard"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/30 hover:shadow-xl hover:shadow-[#0B5CFF]/40 transition-all duration-200 active:scale-[0.98]"
+              >
+                <span>Enter Dashboard</span>
+                <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/signup"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/30 hover:shadow-xl hover:shadow-[#0B5CFF]/40 transition-all duration-200 active:scale-[0.98]"
+                >
+                  <span>Get Started Free</span>
+                  <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl bg-white hover:bg-slate-50 text-[#0F172A] border border-[#E2E8F0] text-sm sm:text-base font-semibold shadow-sm transition-all"
+                >
+                  <span>Log in</span>
+                </Link>
+              </>
+            )}
             <a
               href="#preview"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl bg-white hover:bg-slate-50 text-[#0F172A] border border-[#E2E8F0] text-sm sm:text-base font-semibold shadow-sm transition-all"
@@ -248,54 +324,56 @@ export default function LandingPage() {
                 </div>
                 <div className="relative flex items-center justify-center my-auto py-2">
                   <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#FEBD00]/20 border border-[#FEBD00] flex items-center justify-center text-base sm:text-xl font-bold text-[#FEBD00]">
-                    SM
+                    SJ
                   </div>
                 </div>
                 <div className="relative flex items-center justify-between text-[11px] sm:text-xs">
-                  <span className="font-semibold text-white truncate">Sarah Marketing</span>
-                  <Icon name="Mic" className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
+                  <span className="font-semibold text-white truncate">Sarah Johnson</span>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 ml-2" />
                 </div>
               </div>
 
-              {/* Tile 3 */}
-              <div className="relative rounded-xl sm:rounded-2xl bg-[#1E293B] border border-[#FEBD00]/40 p-3 sm:p-4 hidden sm:flex flex-col justify-between overflow-hidden min-h-35 sm:min-h-45">
+              {/* Tile 3 (Desktop Only) */}
+              <div className="hidden lg:flex relative rounded-2xl bg-[#1E293B] border border-white/10 p-4 flex-col justify-between overflow-hidden">
                 <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-black/20" />
                 <div className="relative flex justify-between items-center">
-                  <span className="px-2 py-0.5 rounded bg-[#FEBD00]/20 text-[#FEBD00] text-[10px] sm:text-[11px] font-semibold border border-[#FEBD00]/30 backdrop-blur flex items-center gap-1">
-                    <Icon name="Hand" className="w-3 h-3" /> Hand Raised
+                  <span className="px-2 py-0.5 rounded bg-black/60 text-[11px] font-medium text-[#94A3B8] backdrop-blur">
+                    Muted 🔇
                   </span>
+                  <span className="text-xl">🔥</span>
                 </div>
                 <div className="relative flex items-center justify-center my-auto py-2">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-base sm:text-xl font-bold text-purple-400">
-                    JD
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center text-xl font-bold text-emerald-400">
+                    MP
                   </div>
                 </div>
-                <div className="relative flex items-center justify-between text-[11px] sm:text-xs">
-                  <span className="font-semibold text-white truncate">John Designer</span>
-                  <Icon name="MicOff" className="w-3.5 h-3.5 text-red-400 shrink-0 ml-2" />
+                <div className="relative flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white truncate">Michael Park</span>
+                  <div className="w-2 h-2 rounded-full bg-[#64748B] shrink-0 ml-2" />
                 </div>
               </div>
             </div>
 
-            {/* Bottom Control Bar Mockup */}
-            <div className="mt-3 sm:mt-4 pt-3 border-t border-white/10 flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
-              <div className="p-2 sm:p-2.5 rounded-full bg-white/10 text-white cursor-pointer hover:bg-white/20 transition-colors">
-                <Icon name="Mic" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            {/* Bottom Bar Mockup */}
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs">
+                  <Icon name="Mic" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/10 flex items-center justify-center text-white text-xs">
+                  <Icon name="Video" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0B5CFF] flex items-center justify-center text-white text-xs">
+                  <Icon name="Share2" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
               </div>
-              <div className="p-2 sm:p-2.5 rounded-full bg-white/10 text-white cursor-pointer hover:bg-white/20 transition-colors">
-                <Icon name="Video" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="text-xs sm:text-sm">🎉</span>
+                <span className="text-xs sm:text-sm">❤️</span>
+                <span className="text-xs sm:text-sm">👍</span>
               </div>
-              <div className="p-2 sm:p-2.5 rounded-full bg-white/10 text-white cursor-pointer hover:bg-white/20 transition-colors">
-                <Icon name="MonitorUp" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-              <div className="p-2 sm:p-2.5 rounded-full bg-[#FEBD00]/20 text-[#FEBD00] border border-[#FEBD00]/40 cursor-pointer">
-                <Icon name="Hand" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-              <div className="p-2 sm:p-2.5 rounded-full bg-white/10 text-white cursor-pointer hover:bg-white/20 transition-colors">
-                <Icon name="MessageSquare" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </div>
-              <div className="p-2 sm:p-2.5 rounded-full bg-red-500 text-white cursor-pointer hover:bg-red-600 transition-colors">
-                <Icon name="PhoneOff" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-red-600 text-white text-[11px] sm:text-xs font-semibold">
+                Leave
               </div>
             </div>
           </div>
@@ -303,37 +381,36 @@ export default function LandingPage() {
       </section>
 
       {/* 4. Features Section */}
-      <section id="features" className="py-14 sm:py-20 bg-white border-y border-[#E2E8F0]">
+      <section id="features" className="py-14 sm:py-20 bg-white border-t border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-16">
             <span className="text-xs font-bold uppercase tracking-wider text-[#0B5CFF]">
               Everything you need
             </span>
             <h2 className="font-heading text-2xl sm:text-4xl font-extrabold text-[#0F172A] mt-2">
               Engineered for seamless collaboration
             </h2>
-            <p className="mt-3 sm:mt-4 text-xs sm:text-base text-[#64748B]">
-              Experience crisp audio, smooth video, and intuitive tools that keep your team focused on what matters.
+            <p className="text-xs sm:text-sm md:text-base text-[#64748B] mt-3">
+              Powerful built-in tools that make every remote team meeting productive, natural, and fun.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             <FeatureCard
               icon="Video"
-              title="HD Video & Spatial Audio"
-              description="High-definition, low-latency streaming powered by VideoSDK WebRTC infrastructure."
-              badge="Fast"
+              title="HD Audio & Video"
+              description="Crisp video streams with automatic adaptive bitrate streaming for reliable calls on any network."
+              badge="WebRTC"
             />
             <FeatureCard
-              icon="Zap"
-              title="1-Click Instant Meetings"
-              description="Create a meeting link in seconds and share it with teammates without requiring logins."
-              badge="Instant"
+              icon="Share2"
+              title="Fast Screen Sharing"
+              description="Share single tabs, windows, or full displays with high frame rate and low latency."
             />
             <FeatureCard
-              icon="MonitorUp"
-              title="High-Res Screen Sharing"
-              description="Share slides, documents, or entire workspaces in sharp 60fps quality with one click."
+              icon="MessageSquare"
+              title="Chat & Collaboration"
+              description="Interactive real-time chat with timestamped messaging and immediate participant awareness."
             />
             <FeatureCard
               icon="Smile"
@@ -375,7 +452,7 @@ export default function LandingPage() {
                 Launch Dashboard
               </h3>
               <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
-                Click 'Enter Dashboard' to generate a unique meeting ID or paste an existing link to join immediately.
+                Enter your dashboard to create a room instantly, schedule a meeting, or join using a room ID.
               </p>
             </div>
 
@@ -458,16 +535,26 @@ export default function LandingPage() {
                 Ready for effortless team video meetings?
               </h2>
               <p className="mt-3 sm:mt-4 text-xs sm:text-sm md:text-base text-[#94A3B8]">
-                No downloads, no passwords, no hassle. Jump into the ConnectMeet dashboard and start meeting right now.
+                No downloads, no hassle. Jump into ConnectMeet and start meeting with your team right now.
               </p>
               <div className="mt-6 sm:mt-8">
-                <Link
-                  href="/dashboard"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/40 hover:shadow-xl transition-all active:scale-[0.98]"
-                >
-                  <span>Enter Dashboard Now</span>
-                  <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Link>
+                {loggedIn ? (
+                  <Link
+                    href="/dashboard"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/40 hover:shadow-xl transition-all active:scale-[0.98]"
+                  >
+                    <span>Enter Dashboard Now</span>
+                    <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/signup"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl bg-[#0B5CFF] hover:bg-[#0948cc] text-white text-sm sm:text-base font-bold shadow-lg shadow-[#0B5CFF]/40 hover:shadow-xl transition-all active:scale-[0.98]"
+                  >
+                    <span>Get Started Free</span>
+                    <Icon name="ArrowRight" className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -487,9 +574,15 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6">
-            <Link href="/dashboard" className="hover:text-[#0B5CFF] transition-colors">Dashboard</Link>
-            <a href="#features" className="hover:text-[#0B5CFF] transition-colors">Features</a>
-            <a href="#faq" className="hover:text-[#0B5CFF] transition-colors">FAQ</a>
+            <Link href="/dashboard" className="hover:text-[#0B5CFF] transition-colors">
+              Dashboard
+            </Link>
+            <a href="#features" className="hover:text-[#0B5CFF] transition-colors">
+              Features
+            </a>
+            <a href="#faq" className="hover:text-[#0B5CFF] transition-colors">
+              FAQ
+            </a>
           </div>
         </div>
       </footer>
