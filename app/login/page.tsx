@@ -47,7 +47,7 @@ function LoginForm() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-8 sm:px-6 lg:px-8 flex items-center justify-center">
+    <main className="min-h-screen bg-linear-to-br from-slate-50 via-white to-blue-50 px-4 py-8 sm:px-6 lg:px-8 flex items-center justify-center">
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-2xl shadow-blue-950/5 backdrop-blur sm:p-8">
         <div className="mb-6 space-y-2 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0B5CFF]/10 text-[#0B5CFF]">
