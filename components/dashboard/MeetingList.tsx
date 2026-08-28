@@ -4,18 +4,21 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Icon from "@/components/Icon";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
 import { Meeting, getMeetings, formatMeetingDate, removeMeeting } from "@/lib/meetings";
 
 export default function MeetingList() {
+  const { user } = useAuth();
+  const userId = user?.id || user?.email || "guest";
   const router = useRouter();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [today, setToday] = useState<Date | null>(null);
 
   useEffect(() => {
-    setMeetings(getMeetings());
+    setMeetings(getMeetings(userId));
     setToday(new Date());
-  }, []);
+  }, [userId]);
 
   const handleCopyLink = async (link: string, id: string) => {
     await navigator.clipboard.writeText(link);
@@ -28,8 +31,8 @@ export default function MeetingList() {
   };
 
   const handleDelete = (id: string) => {
-    removeMeeting(id);
-    setMeetings(getMeetings());
+    removeMeeting(id, userId);
+    setMeetings(getMeetings(userId));
   };
 
   const todayStart = today ? new Date(today.getFullYear(), today.getMonth(), today.getDate()) : null;

@@ -7,43 +7,52 @@ export interface Meeting {
   link: string;
   host: string;
   participants: number;
+  userId?: string;
 }
 
-const STORAGE_KEY = "connectmeet_meetings";
+function getStorageKey(userId?: string): string {
+  if (userId && userId.trim()) {
+    return `connectmeet_meetings_${userId.trim()}`;
+  }
+  return "connectmeet_meetings_guest";
+}
 
-const initialMeetings: Meeting[] = [];
+export function getMeetings(userId?: string): Meeting[] {
+  if (typeof window === "undefined") return [];
 
-export function getMeetings(): Meeting[] {
-  if (typeof window === "undefined") return initialMeetings;
-
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const key = getStorageKey(userId);
+  const stored = localStorage.getItem(key);
   if (!stored) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMeetings));
-    return initialMeetings;
+    return [];
   }
 
   try {
     return JSON.parse(stored) as Meeting[];
   } catch {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialMeetings));
-    return initialMeetings;
+    return [];
   }
 }
 
-export function saveMeetings(meetings: Meeting[]): void {
+export function saveMeetings(meetings: Meeting[], userId?: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(meetings));
+  const key = getStorageKey(userId);
+  localStorage.setItem(key, JSON.stringify(meetings));
 }
 
-export function addMeeting(meeting: Meeting): void {
-  const meetings = getMeetings();
-  meetings.push(meeting);
-  saveMeetings(meetings);
+export function addMeeting(meeting: Meeting, userId?: string): void {
+  const targetUserId = userId || meeting.userId;
+  const meetingWithUser: Meeting = {
+    ...meeting,
+    userId: targetUserId,
+  };
+  const meetings = getMeetings(targetUserId);
+  meetings.push(meetingWithUser);
+  saveMeetings(meetings, targetUserId);
 }
 
-export function removeMeeting(id: string): void {
-  const meetings = getMeetings().filter((m) => m.id !== id);
-  saveMeetings(meetings);
+export function removeMeeting(id: string, userId?: string): void {
+  const meetings = getMeetings(userId).filter((m) => m.id !== id);
+  saveMeetings(meetings, userId);
 }
 
 export function formatMeetingDate(dateStr: string): { day: string; month: string } {

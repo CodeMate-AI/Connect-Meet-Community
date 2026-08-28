@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth-context";
 import { addMeeting, createVideoSDKRoom, generateMeetingLink } from "@/lib/meetings";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
@@ -23,6 +24,8 @@ function getDisplayName(): string {
 }
 
 export default function QuickActions() {
+  const { user } = useAuth();
+  const userId = user?.id || user?.email || "guest";
   const router = useRouter();
   const [newMeetingOpen, setNewMeetingOpen] = useState(false);
   const [joinMeetingOpen, setJoinMeetingOpen] = useState(false);
@@ -75,16 +78,20 @@ export default function QuickActions() {
       const id = await createVideoSDKRoom();
       const dateObj = new Date(`${scheduleDate}T${scheduleTime}`);
       const displayName = getDisplayName();
-      addMeeting({
-        id,
-        title: scheduleTitle,
-        date: dateObj.toISOString(),
-        time: scheduleTime,
-        duration: "30 min",
-        link: generateMeetingLink(id),
-        host: displayName,
-        participants: 1,
-      });
+      addMeeting(
+        {
+          id,
+          title: scheduleTitle,
+          date: dateObj.toISOString(),
+          time: scheduleTime,
+          duration: "30 min",
+          link: generateMeetingLink(id),
+          host: displayName,
+          participants: 1,
+          userId,
+        },
+        userId
+      );
       setScheduleOpen(false);
       setScheduleTitle("");
       setScheduleDate("");

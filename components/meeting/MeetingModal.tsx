@@ -18,6 +18,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@/components/ui/tabs";
+import { useAuth } from "@/lib/auth-context";
 import { addMeeting, createVideoSDKRoom, generateMeetingLink } from "@/lib/meetings";
 
 const DISPLAY_NAME_KEY = "connectmeet_display_name";
@@ -38,6 +39,8 @@ export default function MeetingModal({
   onOpenChange,
   defaultTab = "join",
 }: MeetingModalProps) {
+  const { user } = useAuth();
+  const userId = user?.id || user?.email || "guest";
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
 
@@ -140,19 +143,23 @@ export default function MeetingModal({
 
     // Persist joined meeting to localStorage (lightweight record)
     const link = generateMeetingLink(joinId.trim());
-    addMeeting({
-      id: joinId.trim(),
-      title: joinName.trim() || "Joined Meeting",
-      date: new Date().toISOString(),
-      time: new Date().toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      duration: "30 min",
-      link,
-      host: joinName.trim() || getDisplayName(),
-      participants: 1,
-    });
+    addMeeting(
+      {
+        id: joinId.trim(),
+        title: joinName.trim() || "Joined Meeting",
+        date: new Date().toISOString(),
+        time: new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        duration: "30 min",
+        link,
+        host: joinName.trim() || getDisplayName(),
+        participants: 1,
+        userId,
+      },
+      userId
+    );
 
     if (typeof window !== "undefined") {
       localStorage.setItem(DISPLAY_NAME_KEY, joinName.trim());
@@ -171,21 +178,25 @@ export default function MeetingModal({
       : new Date();
     const displayName = getDisplayName();
 
-    addMeeting({
-      id: newId,
-      title: newTitle.trim(),
-      date: dateObj.toISOString(),
-      time: hasSchedule
-        ? newScheduleTime
-        : new Date().toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-      duration: "30 min",
-      link: generateMeetingLink(newId),
-      host: displayName,
-      participants: 1,
-    });
+    addMeeting(
+      {
+        id: newId,
+        title: newTitle.trim(),
+        date: dateObj.toISOString(),
+        time: hasSchedule
+          ? newScheduleTime
+          : new Date().toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+        duration: "30 min",
+        link: generateMeetingLink(newId),
+        host: displayName,
+        participants: 1,
+        userId,
+      },
+      userId
+    );
 
     onOpenChange(false);
     if (hasSchedule) {
