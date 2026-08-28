@@ -141,9 +141,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
     async (email, password, redirectTo = "/dashboard") => {
+      const cleanEmail = email.trim();
+
       // If logging in with demo credentials, use guaranteed demo handler
       if (
-        email.trim().toLowerCase() === DEMO_CREDENTIALS.email.toLowerCase() &&
+        cleanEmail.toLowerCase() === DEMO_CREDENTIALS.email.toLowerCase() &&
         password === DEMO_CREDENTIALS.password
       ) {
         await signInDemo(redirectTo);
@@ -155,15 +157,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
-        return;
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+
+        if (data.session) {
+          setUser(data.session.user ?? null);
+          setSession(data.session);
+          syncDisplayName(data.session.user ?? null);
+        }
+
+        toast.success("Welcome back!");
+        router.push(redirectTo);
+        router.refresh();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to sign in";
+        toast.error(message);
       }
-      router.push(redirectTo);
-      router.refresh();
     },
-    [router, supabase, signInDemo]
+    [router, supabase, signInDemo, syncDisplayName]
   );
 
   const signUp = useCallback<AuthContextValue["signUp"]>(
@@ -173,33 +192,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, needsConfirmation: false };
       }
 
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
+      try {
+        const cleanEmail = email.trim();
+        const cleanFullName = fullName.trim();
+        const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined;
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: redirectTo,
-        },
-      });
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: { full_name: cleanFullName },
+            emailRedirectTo: redirectTo,
+          },
+        });
 
-      if (error) {
-        toast.error(error.message);
+        if (error) {
+          toast.error(error.message);
+          return { success: false, needsConfirmation: false };
+        }
+
+        // Supabase returns empty identities array if user already exists
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+          toast.error("An account with this email already exists. Please log in.");
+          router.push("/login");
+          return { success: false, needsConfirmation: false };
+        }
+
+        if (data.session) {
+          setUser(data.session.user ?? null);
+          setSession(data.session);
+          syncDisplayName(data.session.user ?? null);
+          toast.success("Account created! Redirecting to your dashboard...");
+          router.push("/dashboard");
+          router.refresh();
+          return { success: true, needsConfirmation: false };
+        }
+
+        if (data.user) {
+          toast.info("We have sent an email. Please confirm it.");
+          return { success: true, needsConfirmation: true };
+        }
+
+        return { success: true, needsConfirmation: false };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to sign up";
+        toast.error(message);
         return { success: false, needsConfirmation: false };
       }
-
-      if (data.session) {
-        toast.success("Account created. Redirecting to your dashboard.");
-        router.push("/dashboard");
-        router.refresh();
-        return { success: true, needsConfirmation: false };
-      }
-
-      toast.success("We have sent an email. Please confirm it.");
-      return { success: true, needsConfirmation: true };
     },
-    [router, supabase]
+    [router, supabase, syncDisplayName]
   );
 
   const resendConfirmationEmail = useCallback(
